@@ -1,4 +1,4 @@
-[index_completo (1).html](https://github.com/user-attachments/files/26907455/index_completo.1.html)
+[index_google_sheets.html](https://github.com/user-attachments/files/26908062/index_google_sheets.html)
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -336,11 +336,11 @@
             margin-top: 4px;
         }
         
-        .cal-day.pending .dot { background: #dc2626; } /* vermelho */
-        .cal-day.approved .dot { background: #f59e0b; } /* amarelo */
-        .cal-day.paid .dot { background: #16a34a; } /* verde */
+        .cal-day.pending .dot { background: #dc2626; }
+        .cal-day.approved .dot { background: #f59e0b; }
+        .cal-day.paid .dot { background: #16a34a; }
         
-        /* FILTROS DE PAGAMENTO */
+        /* FILTROS */
         .filter-group {
             display: flex;
             flex-wrap: wrap;
@@ -364,7 +364,6 @@
             border-color: var(--primary);
         }
         
-        /* TABELA DE PAGAMENTOS */
         .payment-table {
             border-collapse: collapse;
             width: 100%;
@@ -387,6 +386,13 @@
         
         .payment-table tr:hover {
             background: #fafafa;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #666;
         }
     </style>
 </head>
@@ -447,11 +453,6 @@
                     </div>
                     <button class="btn btn-primary" onclick="fazerCheckin()">Confirmar chegada</button>
                 </div>
-            </div>
-            
-            <div class="card">
-                <h2>Últimos registros</h2>
-                <div id="lista-rec"></div>
             </div>
         </div>
         
@@ -548,7 +549,8 @@
         <div class="screen" id="screen-cadastros">
             <div class="card">
                 <h2>⚙️ Cadastros</h2>
-                <p style="font-size:12px;color:#666;">Seção de cadastros em desenvolvimento.</p>
+                <div id="cad-loading" class="loading">Carregando dados...</div>
+                <div id="cad-content"></div>
             </div>
         </div>
     </div>
@@ -556,26 +558,18 @@
     <script>
         // CONFIGURAÇÃO
         var SHEET_ID = "1TVYsc9GnaK_T1YILkdgBOJSyDA4CZbEyvzk47Izr-go";
+        var API_URL = "https://sheets.googleapis.com/v4/spreadsheets/" + SHEET_ID + "/values";
+        var API_KEY = "AIzaSyAkfZGHXP-X1e-Dqe1WMZDPxHGVWHAcPqE"; // Chave pública (segura usar em cliente)
         
         var urlParams = new URLSearchParams(window.location.search);
         var tipoAcesso = urlParams.get('tipo') || 'gestor';
         
         var db = {
-            funcionarios: [
-                { nome: "Maria Silva", cargo: "Cuidadora" },
-                { nome: "João Santos", cargo: "Técnico" }
-            ],
-            tipos: [
-                { nome: "Dia (12h)", valor: 180 },
-                { nome: "Noite (12h)", valor: 220 },
-                { nome: "24h", valor: 380 }
-            ],
-            autorizadores: [
-                { nome: "Dr. Roberto", funcao: "Médico" }
-            ],
-            aprovadores: [
-                { nome: "Enf. Carla", funcao: "Enfermeira-chefe" }
-            ],
+            funcionarios: [],
+            tipos: [],
+            autorizadores: [],
+            aprovadores: [],
+            motivos: [],
             plantoes: JSON.parse(localStorage.getItem('plantoes')) || []
         };
         
@@ -583,13 +577,83 @@
         var calMes = hoje.getMonth();
         var calAno = hoje.getFullYear();
         
-        window.addEventListener('DOMContentLoaded', function() {
+        // Carregar dados do Google Sheets
+        async function carregarDados() {
+            try {
+                // Aba Funcionários
+                var funcRes = await fetch(API_URL + "/Funcionários?key=" + API_KEY);
+                var funcData = await funcRes.json();
+                if (funcData.values) {
+                    for (var i = 1; i < funcData.values.length; i++) {
+                        if (funcData.values[i][0]) {
+                            db.funcionarios.push({
+                                nome: funcData.values[i][0],
+                                cargo: funcData.values[i][1] || ''
+                            });
+                        }
+                    }
+                }
+                
+                // Aba Configurações
+                var confRes = await fetch(API_URL + "/Configurações?key=" + API_KEY);
+                var confData = await confRes.json();
+                if (confData.values) {
+                    for (var i = 1; i < confData.values.length; i++) {
+                        if (confData.values[i][0]) {
+                            db.tipos.push({
+                                nome: confData.values[i][0],
+                                valor: parseFloat(confData.values[i][1]) || 0,
+                                requerHospede: confData.values[i][2] === 'Sim'
+                            });
+                            // Motivos vêm da coluna E da aba Plantões
+                        }
+                    }
+                }
+                
+                // Aba Plantões para extrair motivos (coluna E)
+                var plantRes = await fetch(API_URL + "/Plantões?key=" + API_KEY);
+                var plantData = await plantRes.json();
+                if (plantData.values && plantData.values.length > 0) {
+                    // Verificar se existe coluna de motivos (coluna E - índice 4)
+                    for (var i = 1; i < plantData.values.length; i++) {
+                        if (plantData.values[i][4] && plantData.values[i][4].trim()) {
+                            var motivo = plantData.values[i][4].trim();
+                            if (db.motivos.indexOf(motivo) === -1) {
+                                db.motivos.push(motivo);
+                            }
+                        }
+                    }
+                }
+                
+                // Se não encontrou motivos, usa padrão
+                if (db.motivos.length === 0) {
+                    db.motivos = ['Agitação noturna', 'Intercorrência médica', 'Reforço de equipe'];
+                }
+                
+                // Autorizadores e Aprovadores (dados fictícios por enquanto)
+                db.autorizadores = [{ nome: "Dr. Roberto", funcao: "Médico" }];
+                db.aprovadores = [{ nome: "Enf. Carla", funcao: "Enfermeira-chefe" }];
+                
+                console.log('Dados carregados:', db);
+            } catch (e) {
+                console.error('Erro ao carregar Google Sheets:', e);
+                // Usar dados padrão se falhar
+                db.funcionarios = [{ nome: "Maria Silva", cargo: "Cuidadora" }];
+                db.tipos = [{ nome: "Dia (12h)", valor: 180 }];
+                db.motivos = ['Motivo padrão'];
+                db.autorizadores = [{ nome: "Dr. Roberto", funcao: "Médico" }];
+                db.aprovadores = [{ nome: "Enf. Carla", funcao: "Enfermeira-chefe" }];
+            }
+            
             configurarAcesso();
             populateSelects();
-            renderRec();
-            renderCal();
-            initTabDates();
+            renderTab();
+            renderCad();
             if (tipoAcesso === 'enfermeira') renderEnf();
+        }
+        
+        window.addEventListener('DOMContentLoaded', function() {
+            carregarDados();
         });
         
         function configurarAcesso() {
@@ -635,10 +699,11 @@
             var idx = tabs.indexOf(s);
             if (idx >= 0) document.querySelectorAll('.nav button')[idx].classList.add('active');
             
-            if (s === 'checkin') { resetGate(); renderRec(); }
+            if (s === 'checkin') { resetGate(); }
             if (s === 'enfermeira') { renderEnf(); }
             if (s === 'calendario') { renderCal(); }
             if (s === 'pagamentos') { renderTab(); }
+            if (s === 'cadastros') { renderCad(); }
         }
         
         function resetGate() {
@@ -682,6 +747,15 @@
                 ts.appendChild(opt);
             });
             
+            var ms = document.getElementById('ci-motivo');
+            ms.innerHTML = '<option value="">Opcional...</option>';
+            db.motivos.forEach(m => {
+                var opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = m;
+                ms.appendChild(opt);
+            });
+            
             var as = document.getElementById('ci-autor');
             as.innerHTML = '<option value="">Selecione...</option>';
             db.autorizadores.forEach(a => {
@@ -715,6 +789,7 @@
                 id: Date.now(),
                 func: func,
                 tipo: tipo,
+                motivo: document.getElementById('ci-motivo').value || null,
                 data: hoje.toLocaleDateString('pt-BR'),
                 dataObj: new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()),
                 hora: hoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
@@ -728,29 +803,10 @@
             
             document.getElementById('ci-func').value = '';
             document.getElementById('ci-tipo').value = '';
+            document.getElementById('ci-motivo').value = '';
             document.getElementById('ci-autor').value = '';
             toast('✅ Check-in registrado!');
-            renderRec();
-        }
-        
-        function renderRec() {
-            var el = document.getElementById('lista-rec');
-            var r = db.plantoes.slice(0, 5);
-            
-            if (!r.length) {
-                el.innerHTML = '<p style="font-size:12px;color:#666;">Nenhum registro.</p>';
-                return;
-            }
-            
-            el.innerHTML = r.map(p => `
-                <div class="item">
-                    <div class="item-head">
-                        <span class="item-name">${p.func}</span>
-                        <span class="badge badge-${p.status === 'pendente' ? 'warn' : p.status === 'aprovado' ? 'ok' : 'danger'}">${p.status}</span>
-                    </div>
-                    <div class="item-sub">${p.tipo} · ${p.hora} · ${p.data}</div>
-                </div>
-            `).join('');
+            resetGate();
         }
         
         function renderEnf() {
@@ -842,7 +898,6 @@
                 html += '</div>';
             }
             
-            var proximoMes = new Date(calAno, calMes + 1, 1).getDay();
             for (var i = 1; i < (42 - primeiro - diasMes); i++) {
                 html += '<div class="cal-day other-month">' + i + '</div>';
             }
@@ -877,7 +932,7 @@
             }
             
             det.style.display = 'block';
-            document.getElementById('det-data').textContent = d + ' de ' + meses[calMes] + ' de ' + calAno + ' — ' + plantoesDia.length + ' plantão(ões)';
+            document.getElementById('det-data').textContent = d + ' de ' + meses[calMes] + ' · ' + plantoesDia.length + ' plantão(ões)';
             document.getElementById('det-items').innerHTML = plantoesDia.map(p => `
                 <div class="item">
                     <div class="item-head">
@@ -890,14 +945,6 @@
         }
         
         // PAGAMENTOS
-        function initTabDates() {
-            var de = document.getElementById('tab-de');
-            var ate = document.getElementById('tab-ate');
-            
-            de.valueAsDate = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-            ate.valueAsDate = hoje;
-        }
-        
         function filtroRapido(tipo) {
             var de = new Date();
             var ate = new Date();
@@ -928,7 +975,7 @@
             var ate = ateVal ? new Date(ateVal + 'T23:59:59') : null;
             
             var filtrados = db.plantoes.filter(p => {
-                if (p.status !== 'aprovado' && !p.pago) return false;
+                if (p.status !== 'aprovado' && p.status !== 'pago') return false;
                 if (de && p.dataObj < de) return false;
                 if (ate && p.dataObj > ate) return false;
                 return true;
@@ -949,7 +996,7 @@
                 html += '<td>' + p.func + '</td>';
                 html += '<td style="font-size:11px;">' + p.tipo + '</td>';
                 html += '<td>R$' + p.valor + '</td>';
-                html += '<td><span class="badge badge-' + (p.pago ? 'ok' : 'warn') + '">' + (p.pago ? 'Pago' : 'Aprovado') + '</span></td>';
+                html += '<td><span class="badge badge-' + (p.status === 'pago' ? 'ok' : 'warn') + '">' + p.status + '</span></td>';
                 html += '</tr>';
             });
             
@@ -959,6 +1006,32 @@
             html += '</div>';
             
             el.innerHTML = html;
+        }
+        
+        function renderCad() {
+            var html = '<h3 style="margin:16px 0 12px;font-size:14px;">Funcionários (' + db.funcionarios.length + ')</h3>';
+            html += '<div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;">';
+            db.funcionarios.forEach(f => {
+                html += '<div style="padding:10px;border-bottom:1px solid var(--border);"><strong>' + f.nome + '</strong><br><span style="font-size:11px;color:#666;">' + f.cargo + '</span></div>';
+            });
+            html += '</div>';
+            
+            html += '<h3 style="margin:16px 0 12px;font-size:14px;">Tipos de Plantão (' + db.tipos.length + ')</h3>';
+            html += '<div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;">';
+            db.tipos.forEach(t => {
+                html += '<div style="padding:10px;border-bottom:1px solid var(--border);"><strong>' + t.nome + '</strong><br><span style="font-size:11px;color:var(--success);">R$' + t.valor + '</span></div>';
+            });
+            html += '</div>';
+            
+            html += '<h3 style="margin:16px 0 12px;font-size:14px;">Motivos (' + db.motivos.length + ')</h3>';
+            html += '<div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;">';
+            db.motivos.forEach(m => {
+                html += '<div style="padding:10px;border-bottom:1px solid var(--border);">' + m + '</div>';
+            });
+            html += '</div>';
+            
+            document.getElementById('cad-loading').style.display = 'none';
+            document.getElementById('cad-content').innerHTML = html;
         }
     </script>
 </body>
