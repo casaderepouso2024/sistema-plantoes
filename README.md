@@ -1,4 +1,4 @@
-[index.html](https://github.com/user-attachments/files/26897853/index.html)
+[index_3_acessos.html](https://github.com/user-attachments/files/26900501/index_3_acessos.html)
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -40,6 +40,18 @@
         .header h1 { font-size: 20px; margin-bottom: 4px; }
         .header p { font-size: 12px; opacity: 0.9; }
         
+        .access-banner {
+            background: #dbeafe;
+            border: 1px solid #0284c7;
+            border-radius: 6px;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            font-size: 11px;
+            color: #0c4a6e;
+            text-align: center;
+            font-weight: 500;
+        }
+        
         .nav {
             display: flex;
             gap: 4px;
@@ -68,6 +80,11 @@
         .nav button.active {
             background: var(--primary);
             color: white;
+        }
+        
+        .nav button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
         }
         
         .screen { display: none; }
@@ -189,12 +206,6 @@
         .item-name { font-weight: 600; font-size: 13px; }
         .item-sub { font-size: 11px; color: #666; margin-bottom: 4px; }
         
-        .list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        
         .row2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -257,26 +268,99 @@
         .metric-val { font-size: 20px; font-weight: 600; }
         .metric-lbl { font-size: 10px; color: #666; margin-top: 4px; }
         
-        .obs-box {
-            background: #fffbeb;
-            border-left: 3px solid var(--warning);
-            padding: 8px;
-            border-radius: 4px;
-            margin-top: 8px;
-            font-size: 11px;
-            color: #92400e;
-            font-style: italic;
+        .access-selector {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
         }
+        
+        .access-selector.show {
+            display: flex;
+        }
+        
+        .access-modal {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .access-modal h2 {
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+        
+        .access-modal p {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        .access-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .access-btn {
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: transparent;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .access-btn:hover {
+            background: var(--light);
+            border-color: var(--primary);
+        }
+        
+        .access-btn.func { border-left: 4px solid #f59e0b; }
+        .access-btn.enf { border-left: 4px solid #0ea5e9; }
+        .access-btn.gest { border-left: 4px solid #16a34a; }
     </style>
 </head>
 <body>
+    <!-- SELETOR DE ACESSO -->
+    <div class="access-selector show" id="access-selector">
+        <div class="access-modal">
+            <h2>🔐 Selecione seu acesso</h2>
+            <p>Escolha sua função para continuar</p>
+            <div class="access-options">
+                <button class="access-btn func" onclick="setAcesso('funcionario')">
+                    👤 Funcionário — Apenas Lançar Plantão
+                </button>
+                <button class="access-btn enf" onclick="setAcesso('enfermeira')">
+                    💉 Enfermeira — Aprovar Plantões
+                </button>
+                <button class="access-btn gest" onclick="setAcesso('gestor')">
+                    👨‍💼 Gestor — Acesso Completo
+                </button>
+            </div>
+        </div>
+    </div>
+    
     <div class="container">
         <div class="header">
             <h1>🏥 Plantões</h1>
             <p>Casa de Repouso</p>
         </div>
         
-        <div class="nav">
+        <div id="access-banner" class="access-banner"></div>
+        
+        <div class="nav" id="nav-container">
             <button class="active" onclick="show('checkin')">Check-in</button>
             <button onclick="show('enfermeira')">Enfermeira</button>
             <button onclick="show('calendario')">Calendário</button>
@@ -347,15 +431,15 @@
             
             <div class="metrics">
                 <div class="metric">
-                    <div class="metric-val" style="color:var(--warning);">0</div>
+                    <div class="metric-val" style="color:var(--warning);" id="m-pend">0</div>
                     <div class="metric-lbl">Pendentes</div>
                 </div>
                 <div class="metric">
-                    <div class="metric-val" style="color:var(--success);">0</div>
+                    <div class="metric-val" style="color:var(--success);" id="m-aprov">0</div>
                     <div class="metric-lbl">Aprovados</div>
                 </div>
                 <div class="metric">
-                    <div class="metric-val" style="color:var(--danger);">0</div>
+                    <div class="metric-val" style="color:var(--danger);" id="m-rej">0</div>
                     <div class="metric-lbl">Rejeitados</div>
                 </div>
             </div>
@@ -446,8 +530,10 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
-        // CONFIGURAÇÃO — MUDE AQUI
-        var SHEET_ID = "1TVYsc9GnaK_T1YILkdgBOJSyDA4CZbEyvzk47Izr-go"
+        // CONFIGURAÇÃO
+        var SHEET_ID = "1TVYsc9GnaK_T1YILkdgBOJSyDA4CZbEyvzk47Izr-go";
+        
+        var acessoAtual = null;
         
         var db = {
             tipos: [
@@ -459,23 +545,81 @@
                 { nome: "Maria Silva", cargo: "Cuidadora" },
                 { nome: "João Santos", cargo: "Técnico" }
             ],
+            autorizadores: [
+                { nome: "Dr. Roberto", funcao: "Médico" }
+            ],
+            aprovadores: [
+                { nome: "Enf. Carla", funcao: "Enfermeira-chefe" }
+            ],
             plantoes: [],
             nextId: 1
         };
         
         var hoje = new Date();
         
-        // FUNÇÕES PRINCIPAIS
+        // CONFIGURAR ACESSO
+        function setAcesso(tipo) {
+            acessoAtual = tipo;
+            document.getElementById("access-selector").classList.remove("show");
+            
+            var banner = document.getElementById("access-banner");
+            var buttons = document.querySelectorAll(".nav button");
+            
+            if (tipo === "funcionario") {
+                banner.textContent = "👤 Acesso Funcionário — Apenas Check-in disponível";
+                buttons[0].disabled = false;
+                buttons[1].disabled = true;
+                buttons[2].disabled = true;
+                buttons[3].disabled = true;
+                buttons[4].disabled = true;
+                show("checkin");
+            } else if (tipo === "enfermeira") {
+                banner.textContent = "💉 Acesso Enfermeira — Apenas Aprovação de Plantões";
+                buttons[0].disabled = true;
+                buttons[1].disabled = false;
+                buttons[2].disabled = true;
+                buttons[3].disabled = true;
+                buttons[4].disabled = true;
+                show("enfermeira");
+            } else if (tipo === "gestor") {
+                banner.textContent = "👨‍💼 Acesso Gestor — Controle Total";
+                buttons[0].disabled = false;
+                buttons[1].disabled = false;
+                buttons[2].disabled = false;
+                buttons[3].disabled = false;
+                buttons[4].disabled = false;
+                show("checkin");
+            }
+            
+            populateCI();
+            renderRec();
+        }
+        
         function show(s) {
+            if (!acessoAtual) return;
+            
+            // Verificar permissões
+            if (acessoAtual === "funcionario" && s !== "checkin") {
+                alert("❌ Acesso negado. Você só pode acessar Check-in.");
+                return;
+            }
+            if (acessoAtual === "enfermeira" && s !== "enfermeira") {
+                alert("❌ Acesso negado. Você só pode acessar Aprovação.");
+                return;
+            }
+            
             document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
             document.querySelector("#screen-" + s).classList.add("active");
             document.querySelectorAll(".nav button").forEach(el => el.classList.remove("active"));
-            event.target.classList.add("active");
+            
+            // Ativar botão clicado
+            var buttons = document.querySelectorAll(".nav button");
+            var tabs = ["checkin", "enfermeira", "calendario", "pagamentos", "cadastros"];
+            var idx = tabs.indexOf(s);
+            if (idx >= 0) buttons[idx].classList.add("active");
             
             if (s === "checkin") { resetGate(); populateCI(); renderRec(); }
             if (s === "enfermeira") { populateEnf(); renderEnf(); }
-            if (s === "pagamentos") { initTabDates(); renderTab(); }
-            if (s === "cadastros") { renderCad(); }
         }
         
         function resetGate() {
@@ -518,11 +662,22 @@
                 opt.textContent = t.nome + " — R$" + t.valor;
                 ts.appendChild(opt);
             });
+            
+            var ms = document.getElementById("ci-motivo");
+            ms.innerHTML = '<option value="">Opcional...</option>';
+            
+            var as = document.getElementById("ci-autor");
+            as.innerHTML = '<option value="">Selecione...</option>';
+            db.autorizadores.forEach(a => {
+                var opt = document.createElement("option");
+                opt.value = a.nome;
+                opt.textContent = a.nome;
+                as.appendChild(opt);
+            });
         }
         
         function onTipoChange() {
             var campo = document.getElementById("campo-hosp");
-            // Mostrar campo hóspede apenas para tipos específicos
             campo.style.display = "none";
         }
         
@@ -573,12 +728,26 @@
         }
         
         function populateEnf() {
-            // Adicionar lista de aprovadores se necessário
+            var el = document.getElementById("enf-quem");
+            el.innerHTML = '<option value="">Selecione...</option>';
+            db.aprovadores.forEach(a => {
+                var opt = document.createElement("option");
+                opt.value = a.nome;
+                opt.textContent = a.nome;
+                el.appendChild(opt);
+            });
         }
         
         function renderEnf() {
-            var el = document.getElementById("lista-enf");
             var pend = db.plantoes.filter(p => p.status === "pendente");
+            var aprov = db.plantoes.filter(p => p.status === "aprovado");
+            var rej = db.plantoes.filter(p => p.status === "rejeitado");
+            
+            document.getElementById("m-pend").textContent = pend.length;
+            document.getElementById("m-aprov").textContent = aprov.length;
+            document.getElementById("m-rej").textContent = rej.length;
+            
+            var el = document.getElementById("lista-enf");
             
             if (!pend.length) {
                 el.innerHTML = '<p style="font-size:12px;color:#666;">Nenhum pendente.</p>';
@@ -614,17 +783,6 @@
             renderEnf();
         }
         
-        function initTabDates() {
-            var de = document.getElementById("tab-de");
-            var ate = document.getElementById("tab-ate");
-            if (!de.value) {
-                var y = hoje.getFullYear();
-                var m = String(hoje.getMonth() + 1).padStart(2, "0");
-                de.value = y + "-" + m + "-01";
-                ate.value = hoje.toISOString().split("T")[0];
-            }
-        }
-        
         function renderTab() {
             var el = document.getElementById("tab-lista");
             var lista = db.plantoes.filter(p => p.status === "aprovado");
@@ -634,32 +792,19 @@
                 return;
             }
             
-            var html = "";
-            lista.forEach(p => {
-                html += `
-                    <div class="card">
-                        <div style="display:flex;justify-content:space-between;align-items:center;">
-                            <div>
-                                <div class="item-name">${p.func}</div>
-                                <div class="item-sub">${p.data} · ${p.tipo}</div>
-                            </div>
-                            <div style="text-align:right;">
-                                <div style="font-size:14px;font-weight:600;color:var(--success);">R$${p.valor}</div>
-                                <button class="btn btn-success btn-sm" onclick="marcarPago(${p.id})">Pagar</button>
-                            </div>
+            el.innerHTML = lista.map(p => `
+                <div class="card">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <div class="item-name">${p.func}</div>
+                            <div class="item-sub">${p.data} · ${p.tipo}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:14px;font-weight:600;color:var(--success);">R$${p.valor}</div>
                         </div>
                     </div>
-                `;
-            });
-            
-            el.innerHTML = html;
-        }
-        
-        function marcarPago(id) {
-            db.plantoes.forEach(p => {
-                if (p.id === id) p.status = "pago";
-            });
-            renderTab();
+                </div>
+            `).join("");
         }
         
         function pagarSelecionados() {
@@ -673,7 +818,6 @@
                         <div class="item-name">${t.nome}</div>
                         <div class="item-sub">R$ ${t.valor}</div>
                     </div>
-                    <button onclick="db.tipos.splice(${i},1);renderCad();" style="background:var(--danger);color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:12px;">Deletar</button>
                 </div>
             `).join("");
             
@@ -683,7 +827,6 @@
                         <div class="item-name">${f.nome}</div>
                         <div class="item-sub">${f.cargo}</div>
                     </div>
-                    <button onclick="db.funcionarios.splice(${i},1);renderCad();" style="background:var(--danger);color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:12px;">Deletar</button>
                 </div>
             `).join("");
         }
@@ -695,7 +838,7 @@
             db.tipos.push({ nome: n, valor: v });
             document.getElementById("cad-tn").value = "";
             document.getElementById("cad-tv").value = "";
-            renderCad();
+            populateCI();
         }
         
         function addFunc() {
@@ -705,12 +848,10 @@
             db.funcionarios.push({ nome: n, cargo: c || "—" });
             document.getElementById("cad-fn").value = "";
             document.getElementById("cad-fc").value = "";
+            populateCI();
             renderCad();
         }
         
-        // Inicializar
-        populateCI();
-        renderRec();
         renderCad();
     </script>
 </body>
