@@ -1,4 +1,4 @@
-[index_3_acessos.html](https://github.com/user-attachments/files/26900501/index_3_acessos.html)
+[index_final.html](https://github.com/user-attachments/files/26901491/index_final.html)
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -122,8 +122,6 @@
             font-size: 13px;
             font-family: inherit;
         }
-        
-        .field textarea { resize: vertical; min-height: 60px; }
         
         .btn {
             width: 100%;
@@ -267,91 +265,9 @@
         
         .metric-val { font-size: 20px; font-weight: 600; }
         .metric-lbl { font-size: 10px; color: #666; margin-top: 4px; }
-        
-        .access-selector {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 9999;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .access-selector.show {
-            display: flex;
-        }
-        
-        .access-modal {
-            background: white;
-            border-radius: 8px;
-            padding: 24px;
-            max-width: 400px;
-            text-align: center;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-        }
-        
-        .access-modal h2 {
-            font-size: 18px;
-            margin-bottom: 12px;
-        }
-        
-        .access-modal p {
-            font-size: 13px;
-            color: #666;
-            margin-bottom: 20px;
-        }
-        
-        .access-options {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        
-        .access-btn {
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: transparent;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-        
-        .access-btn:hover {
-            background: var(--light);
-            border-color: var(--primary);
-        }
-        
-        .access-btn.func { border-left: 4px solid #f59e0b; }
-        .access-btn.enf { border-left: 4px solid #0ea5e9; }
-        .access-btn.gest { border-left: 4px solid #16a34a; }
     </style>
 </head>
 <body>
-    <!-- SELETOR DE ACESSO -->
-    <div class="access-selector show" id="access-selector">
-        <div class="access-modal">
-            <h2>🔐 Selecione seu acesso</h2>
-            <p>Escolha sua função para continuar</p>
-            <div class="access-options">
-                <button class="access-btn func" onclick="setAcesso('funcionario')">
-                    👤 Funcionário — Apenas Lançar Plantão
-                </button>
-                <button class="access-btn enf" onclick="setAcesso('enfermeira')">
-                    💉 Enfermeira — Aprovar Plantões
-                </button>
-                <button class="access-btn gest" onclick="setAcesso('gestor')">
-                    👨‍💼 Gestor — Acesso Completo
-                </button>
-            </div>
-        </div>
-    </div>
-    
     <div class="container">
         <div class="header">
             <h1>🏥 Plantões</h1>
@@ -396,7 +312,7 @@
                     </div>
                     <div class="field">
                         <label>Tipo de plantão</label>
-                        <select id="ci-tipo" onchange="onTipoChange()"></select>
+                        <select id="ci-tipo"></select>
                     </div>
                     <div class="field" id="campo-hosp" style="display:none;">
                         <label>Nome do hóspede</label>
@@ -454,8 +370,7 @@
         <div class="screen" id="screen-calendario">
             <div class="card">
                 <h2>📅 Calendário de Pagamentos</h2>
-                <p style="font-size:12px;color:#666;margin-bottom:12px;">Clique em um dia para ver e liberar plantões para pagamento.</p>
-                <div id="cal-wrapper"></div>
+                <p style="font-size:12px;color:#666;">Clique em um dia para ver plantões aprovados.</p>
             </div>
         </div>
         
@@ -466,84 +381,43 @@
                 <div class="row2">
                     <div class="field" style="margin-bottom:0;">
                         <label>De</label>
-                        <input type="date" id="tab-de" onchange="renderTab()">
+                        <input type="date" id="tab-de">
                     </div>
                     <div class="field" style="margin-bottom:0;">
                         <label>Até</label>
-                        <input type="date" id="tab-ate" onchange="renderTab()">
+                        <input type="date" id="tab-ate">
                     </div>
                 </div>
-                <label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-top:8px;">
-                    <input type="checkbox" id="tab-pagos" onchange="renderTab()">
-                    Mostrar pagos também
-                </label>
             </div>
-            
-            <div class="card">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <div>
-                        <div style="font-size:11px;color:#666;">Total selecionado</div>
-                        <div style="font-size:20px;font-weight:600;color:var(--success);">R$0</div>
-                    </div>
-                    <button class="btn btn-success btn-sm" onclick="pagarSelecionados()">Processar</button>
-                </div>
-            </div>
-            
-            <div id="tab-lista"></div>
         </div>
         
         <!-- CADASTROS -->
         <div class="screen" id="screen-cadastros">
             <div class="card">
-                <h2>Tipos de Plantão</h2>
-                <div class="row2">
-                    <div class="field" style="margin-bottom:0;">
-                        <label>Nome</label>
-                        <input id="cad-tn" placeholder="Ex: Plantão dia">
-                    </div>
-                    <div class="field" style="margin-bottom:0;">
-                        <label>Valor R$</label>
-                        <input id="cad-tv" type="number" placeholder="0">
-                    </div>
-                </div>
-                <button class="btn btn-primary" style="margin-top:10px;" onclick="addTipo()">Adicionar tipo</button>
-                <div id="lst-tipos" style="margin-top:12px;"></div>
-            </div>
-            
-            <div class="card">
-                <h2>Funcionários</h2>
-                <div class="row2">
-                    <div class="field" style="margin-bottom:0;">
-                        <label>Nome</label>
-                        <input id="cad-fn" placeholder="Nome">
-                    </div>
-                    <div class="field" style="margin-bottom:0;">
-                        <label>Cargo</label>
-                        <input id="cad-fc" placeholder="Cargo">
-                    </div>
-                </div>
-                <button class="btn btn-primary" style="margin-top:10px;" onclick="addFunc()">Adicionar</button>
-                <div id="lst-func" style="margin-top:12px;"></div>
+                <h2>⚙️ Cadastros</h2>
+                <p style="font-size:12px;color:#666;">Edite os cadastros na aba de Configurações.</p>
             </div>
         </div>
     </div>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
         // CONFIGURAÇÃO
         var SHEET_ID = "1TVYsc9GnaK_T1YILkdgBOJSyDA4CZbEyvzk47Izr-go";
         
-        var acessoAtual = null;
+        // DETECTAR TIPO DE ACESSO PELA URL
+        var urlParams = new URLSearchParams(window.location.search);
+        var tipoAcesso = urlParams.get('tipo') || 'gestor'; // padrão: gestor
         
+        // Dados em memória (em produção, vem do Google Sheets)
         var db = {
+            funcionarios: [
+                { nome: "Maria Silva", cargo: "Cuidadora" },
+                { nome: "João Santos", cargo: "Técnico" }
+            ],
             tipos: [
                 { nome: "Dia (12h)", valor: 180 },
                 { nome: "Noite (12h)", valor: 220 },
                 { nome: "24h", valor: 380 }
-            ],
-            funcionarios: [
-                { nome: "Maria Silva", cargo: "Cuidadora" },
-                { nome: "João Santos", cargo: "Técnico" }
             ],
             autorizadores: [
                 { nome: "Dr. Roberto", funcao: "Médico" }
@@ -551,165 +425,165 @@
             aprovadores: [
                 { nome: "Enf. Carla", funcao: "Enfermeira-chefe" }
             ],
-            plantoes: [],
-            nextId: 1
+            plantoes: JSON.parse(localStorage.getItem('plantoes')) || []
         };
         
         var hoje = new Date();
         
-        // CONFIGURAR ACESSO
-        function setAcesso(tipo) {
-            acessoAtual = tipo;
-            document.getElementById("access-selector").classList.remove("show");
+        // CONFIGURAR ACESSO BASEADO NA URL
+        window.addEventListener('DOMContentLoaded', function() {
+            configurarAcesso();
+            populateSelects();
+            renderRec();
+            if (tipoAcesso === 'enfermeira') renderEnf();
+        });
+        
+        function configurarAcesso() {
+            var banner = document.getElementById('access-banner');
+            var buttons = document.querySelectorAll('.nav button');
             
-            var banner = document.getElementById("access-banner");
-            var buttons = document.querySelectorAll(".nav button");
-            
-            if (tipo === "funcionario") {
-                banner.textContent = "👤 Acesso Funcionário — Apenas Check-in disponível";
+            if (tipoAcesso === 'funcionario') {
+                banner.textContent = '👤 Acesso Funcionário — Apenas Check-in';
                 buttons[0].disabled = false;
                 buttons[1].disabled = true;
                 buttons[2].disabled = true;
                 buttons[3].disabled = true;
                 buttons[4].disabled = true;
-                show("checkin");
-            } else if (tipo === "enfermeira") {
-                banner.textContent = "💉 Acesso Enfermeira — Apenas Aprovação de Plantões";
+            } else if (tipoAcesso === 'enfermeira') {
+                banner.textContent = '💉 Acesso Enfermeira — Apenas Aprovação';
                 buttons[0].disabled = true;
                 buttons[1].disabled = false;
                 buttons[2].disabled = true;
                 buttons[3].disabled = true;
                 buttons[4].disabled = true;
-                show("enfermeira");
-            } else if (tipo === "gestor") {
-                banner.textContent = "👨‍💼 Acesso Gestor — Controle Total";
+                show('enfermeira');
+            } else {
+                banner.textContent = '👨‍💼 Acesso Gestor — Controle Total';
                 buttons[0].disabled = false;
                 buttons[1].disabled = false;
                 buttons[2].disabled = false;
                 buttons[3].disabled = false;
                 buttons[4].disabled = false;
-                show("checkin");
             }
-            
-            populateCI();
-            renderRec();
         }
         
         function show(s) {
-            if (!acessoAtual) return;
-            
             // Verificar permissões
-            if (acessoAtual === "funcionario" && s !== "checkin") {
-                alert("❌ Acesso negado. Você só pode acessar Check-in.");
+            if (tipoAcesso === 'funcionario' && s !== 'checkin') {
+                alert('❌ Acesso negado. Apenas Check-in disponível.');
                 return;
             }
-            if (acessoAtual === "enfermeira" && s !== "enfermeira") {
-                alert("❌ Acesso negado. Você só pode acessar Aprovação.");
+            if (tipoAcesso === 'enfermeira' && s !== 'enfermeira') {
+                alert('❌ Acesso negado. Apenas Aprovação disponível.');
                 return;
             }
             
-            document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
-            document.querySelector("#screen-" + s).classList.add("active");
-            document.querySelectorAll(".nav button").forEach(el => el.classList.remove("active"));
+            document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+            document.querySelector('#screen-' + s).classList.add('active');
+            document.querySelectorAll('.nav button').forEach(el => el.classList.remove('active'));
             
-            // Ativar botão clicado
-            var buttons = document.querySelectorAll(".nav button");
-            var tabs = ["checkin", "enfermeira", "calendario", "pagamentos", "cadastros"];
+            var tabs = ['checkin', 'enfermeira', 'calendario', 'pagamentos', 'cadastros'];
             var idx = tabs.indexOf(s);
-            if (idx >= 0) buttons[idx].classList.add("active");
+            if (idx >= 0) document.querySelectorAll('.nav button')[idx].classList.add('active');
             
-            if (s === "checkin") { resetGate(); populateCI(); renderRec(); }
-            if (s === "enfermeira") { populateEnf(); renderEnf(); }
+            if (s === 'checkin') { resetGate(); renderRec(); }
+            if (s === 'enfermeira') { renderEnf(); }
         }
         
         function resetGate() {
-            document.getElementById("ci-gate").style.display = "block";
-            document.getElementById("ci-aviso").style.display = "none";
-            document.getElementById("ci-form").style.display = "none";
+            document.getElementById('ci-gate').style.display = 'block';
+            document.getElementById('ci-aviso').style.display = 'none';
+            document.getElementById('ci-form').style.display = 'none';
         }
         
         function ciGate(sim) {
-            document.getElementById("ci-gate").style.display = "none";
+            document.getElementById('ci-gate').style.display = 'none';
             if (sim) {
-                document.getElementById("ci-form").style.display = "block";
+                document.getElementById('ci-form').style.display = 'block';
             } else {
-                document.getElementById("ci-aviso").style.display = "block";
+                document.getElementById('ci-aviso').style.display = 'block';
             }
         }
         
-        function toast(msg, type = "success") {
-            var el = document.getElementById("toast-ci");
+        function toast(msg, type = 'success') {
+            var el = document.getElementById('toast-ci');
             el.textContent = msg;
-            el.className = "toast show " + type;
-            setTimeout(() => el.className = "toast", 3000);
+            el.className = 'toast show ' + type;
+            setTimeout(() => el.className = 'toast', 3000);
         }
         
-        function populateCI() {
-            var fs = document.getElementById("ci-func");
+        function populateSelects() {
+            var fs = document.getElementById('ci-func');
             fs.innerHTML = '<option value="">Selecione...</option>';
             db.funcionarios.forEach(f => {
-                var opt = document.createElement("option");
+                var opt = document.createElement('option');
                 opt.value = f.nome;
                 opt.textContent = f.nome;
                 fs.appendChild(opt);
             });
             
-            var ts = document.getElementById("ci-tipo");
+            var ts = document.getElementById('ci-tipo');
             ts.innerHTML = '<option value="">Selecione...</option>';
             db.tipos.forEach(t => {
-                var opt = document.createElement("option");
+                var opt = document.createElement('option');
                 opt.value = t.nome;
-                opt.textContent = t.nome + " — R$" + t.valor;
+                opt.textContent = t.nome + ' — R$' + t.valor;
                 ts.appendChild(opt);
             });
             
-            var ms = document.getElementById("ci-motivo");
-            ms.innerHTML = '<option value="">Opcional...</option>';
-            
-            var as = document.getElementById("ci-autor");
+            var as = document.getElementById('ci-autor');
             as.innerHTML = '<option value="">Selecione...</option>';
             db.autorizadores.forEach(a => {
-                var opt = document.createElement("option");
+                var opt = document.createElement('option');
                 opt.value = a.nome;
                 opt.textContent = a.nome;
                 as.appendChild(opt);
             });
-        }
-        
-        function onTipoChange() {
-            var campo = document.getElementById("campo-hosp");
-            campo.style.display = "none";
+            
+            var es = document.getElementById('enf-quem');
+            es.innerHTML = '<option value="">Selecione...</option>';
+            db.aprovadores.forEach(a => {
+                var opt = document.createElement('option');
+                opt.value = a.nome;
+                opt.textContent = a.nome;
+                es.appendChild(opt);
+            });
         }
         
         function fazerCheckin() {
-            var func = document.getElementById("ci-func").value;
-            var tipo = document.getElementById("ci-tipo").value;
+            var func = document.getElementById('ci-func').value;
+            var tipo = document.getElementById('ci-tipo').value;
             
             if (!func || !tipo) {
-                toast("Preencha todos os campos!", "error");
+                toast('Preencha todos os campos!', 'error');
                 return;
             }
             
             var t = db.tipos.find(x => x.nome === tipo);
-            db.plantoes.unshift({
-                id: db.nextId++,
+            var p = {
+                id: Date.now(),
                 func: func,
                 tipo: tipo,
-                data: hoje.toLocaleDateString("pt-BR"),
-                hora: hoje.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+                data: hoje.toLocaleDateString('pt-BR'),
+                hora: hoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
                 valor: t.valor,
-                status: "pendente"
-            });
+                status: 'pendente',
+                autor: document.getElementById('ci-autor').value || null
+            };
             
-            document.getElementById("ci-func").value = "";
-            document.getElementById("ci-tipo").value = "";
-            toast("Check-in registrado!");
+            db.plantoes.unshift(p);
+            localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
+            
+            document.getElementById('ci-func').value = '';
+            document.getElementById('ci-tipo').value = '';
+            document.getElementById('ci-autor').value = '';
+            toast('✅ Check-in registrado!');
             renderRec();
         }
         
         function renderRec() {
-            var el = document.getElementById("lista-rec");
-            var r = db.plantoes.slice(0, 4);
+            var el = document.getElementById('lista-rec');
+            var r = db.plantoes.slice(0, 5);
             
             if (!r.length) {
                 el.innerHTML = '<p style="font-size:12px;color:#666;">Nenhum registro.</p>';
@@ -720,34 +594,23 @@
                 <div class="item">
                     <div class="item-head">
                         <span class="item-name">${p.func}</span>
-                        <span class="badge badge-${p.status === "pendente" ? "warn" : "ok"}">${p.status}</span>
+                        <span class="badge badge-${p.status === 'pendente' ? 'warn' : p.status === 'aprovado' ? 'ok' : 'danger'}">${p.status}</span>
                     </div>
                     <div class="item-sub">${p.tipo} · ${p.hora} · ${p.data}</div>
                 </div>
-            `).join("");
-        }
-        
-        function populateEnf() {
-            var el = document.getElementById("enf-quem");
-            el.innerHTML = '<option value="">Selecione...</option>';
-            db.aprovadores.forEach(a => {
-                var opt = document.createElement("option");
-                opt.value = a.nome;
-                opt.textContent = a.nome;
-                el.appendChild(opt);
-            });
+            `).join('');
         }
         
         function renderEnf() {
-            var pend = db.plantoes.filter(p => p.status === "pendente");
-            var aprov = db.plantoes.filter(p => p.status === "aprovado");
-            var rej = db.plantoes.filter(p => p.status === "rejeitado");
+            var pend = db.plantoes.filter(p => p.status === 'pendente');
+            var aprov = db.plantoes.filter(p => p.status === 'aprovado');
+            var rej = db.plantoes.filter(p => p.status === 'rejeitado');
             
-            document.getElementById("m-pend").textContent = pend.length;
-            document.getElementById("m-aprov").textContent = aprov.length;
-            document.getElementById("m-rej").textContent = rej.length;
+            document.getElementById('m-pend').textContent = pend.length;
+            document.getElementById('m-aprov').textContent = aprov.length;
+            document.getElementById('m-rej').textContent = rej.length;
             
-            var el = document.getElementById("lista-enf");
+            var el = document.getElementById('lista-enf');
             
             if (!pend.length) {
                 el.innerHTML = '<p style="font-size:12px;color:#666;">Nenhum pendente.</p>';
@@ -766,93 +629,24 @@
                         <button class="btn btn-danger btn-sm" style="flex:1;" onclick="rejeitar(${p.id})">Rejeitar</button>
                     </div>
                 </div>
-            `).join("");
+            `).join('');
         }
         
         function aprovar(id) {
-            db.plantoes.forEach(p => {
-                if (p.id === id) p.status = "aprovado";
-            });
+            db.plantoes = db.plantoes.map(p => 
+                p.id === id ? {...p, status: 'aprovado', aprovadoPor: document.getElementById('enf-quem').value} : p
+            );
+            localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
             renderEnf();
         }
         
         function rejeitar(id) {
-            db.plantoes.forEach(p => {
-                if (p.id === id) p.status = "rejeitado";
-            });
+            db.plantoes = db.plantoes.map(p => 
+                p.id === id ? {...p, status: 'rejeitado'} : p
+            );
+            localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
             renderEnf();
         }
-        
-        function renderTab() {
-            var el = document.getElementById("tab-lista");
-            var lista = db.plantoes.filter(p => p.status === "aprovado");
-            
-            if (!lista.length) {
-                el.innerHTML = '<div class="card"><p style="font-size:12px;color:#666;">Nenhum plantão aprovado.</p></div>';
-                return;
-            }
-            
-            el.innerHTML = lista.map(p => `
-                <div class="card">
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <div>
-                            <div class="item-name">${p.func}</div>
-                            <div class="item-sub">${p.data} · ${p.tipo}</div>
-                        </div>
-                        <div style="text-align:right;">
-                            <div style="font-size:14px;font-weight:600;color:var(--success);">R$${p.valor}</div>
-                        </div>
-                    </div>
-                </div>
-            `).join("");
-        }
-        
-        function pagarSelecionados() {
-            alert("Plantões marcados como pagos!");
-        }
-        
-        function renderCad() {
-            document.getElementById("lst-tipos").innerHTML = db.tipos.map((t, i) => `
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid var(--border);">
-                    <div>
-                        <div class="item-name">${t.nome}</div>
-                        <div class="item-sub">R$ ${t.valor}</div>
-                    </div>
-                </div>
-            `).join("");
-            
-            document.getElementById("lst-func").innerHTML = db.funcionarios.map((f, i) => `
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid var(--border);">
-                    <div>
-                        <div class="item-name">${f.nome}</div>
-                        <div class="item-sub">${f.cargo}</div>
-                    </div>
-                </div>
-            `).join("");
-        }
-        
-        function addTipo() {
-            var n = document.getElementById("cad-tn").value.trim();
-            var v = parseInt(document.getElementById("cad-tv").value) || 0;
-            if (!n) return;
-            db.tipos.push({ nome: n, valor: v });
-            document.getElementById("cad-tn").value = "";
-            document.getElementById("cad-tv").value = "";
-            populateCI();
-        }
-        
-        function addFunc() {
-            var n = document.getElementById("cad-fn").value.trim();
-            var c = document.getElementById("cad-fc").value.trim();
-            if (!n) return;
-            db.funcionarios.push({ nome: n, cargo: c || "—" });
-            document.getElementById("cad-fn").value = "";
-            document.getElementById("cad-fc").value = "";
-            populateCI();
-            renderCad();
-        }
-        
-        renderCad();
     </script>
 </body>
 </html>
