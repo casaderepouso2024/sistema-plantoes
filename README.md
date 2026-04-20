@@ -1,4 +1,4 @@
-[index_final.html](https://github.com/user-attachments/files/26901491/index_final.html)
+[index_completo (1).html](https://github.com/user-attachments/files/26907455/index_completo.1.html)
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -148,6 +148,7 @@
             width: auto;
             padding: 6px 10px;
             font-size: 12px;
+            margin: 2px;
         }
         
         .badge {
@@ -265,6 +266,128 @@
         
         .metric-val { font-size: 20px; font-weight: 600; }
         .metric-lbl { font-size: 10px; color: #666; margin-top: 4px; }
+        
+        /* CALENDÁRIO */
+        .cal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .cal-header button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .cal-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .cal-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            margin-bottom: 16px;
+        }
+        
+        .cal-day-name {
+            text-align: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: #666;
+            padding: 8px 0;
+        }
+        
+        .cal-day {
+            aspect-ratio: 1;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .cal-day:hover {
+            border-color: var(--primary);
+        }
+        
+        .cal-day.other-month {
+            opacity: 0.3;
+        }
+        
+        .cal-day .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-top: 4px;
+        }
+        
+        .cal-day.pending .dot { background: #dc2626; } /* vermelho */
+        .cal-day.approved .dot { background: #f59e0b; } /* amarelo */
+        .cal-day.paid .dot { background: #16a34a; } /* verde */
+        
+        /* FILTROS DE PAGAMENTO */
+        .filter-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+        
+        .filter-btn {
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .filter-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        /* TABELA DE PAGAMENTOS */
+        .payment-table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 12px;
+            margin-top: 12px;
+        }
+        
+        .payment-table th {
+            background: var(--light);
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .payment-table td {
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .payment-table tr:hover {
+            background: #fafafa;
+        }
     </style>
 </head>
 <body>
@@ -313,10 +436,6 @@
                     <div class="field">
                         <label>Tipo de plantão</label>
                         <select id="ci-tipo"></select>
-                    </div>
-                    <div class="field" id="campo-hosp" style="display:none;">
-                        <label>Nome do hóspede</label>
-                        <select id="ci-hosp"></select>
                     </div>
                     <div class="field">
                         <label>Motivo</label>
@@ -369,8 +488,28 @@
         <!-- CALENDÁRIO -->
         <div class="screen" id="screen-calendario">
             <div class="card">
-                <h2>📅 Calendário de Pagamentos</h2>
-                <p style="font-size:12px;color:#666;">Clique em um dia para ver plantões aprovados.</p>
+                <h2>📅 Calendário de Plantões</h2>
+                
+                <div class="cal-header">
+                    <button onclick="mesAnterior()">‹</button>
+                    <h3 id="cal-mes-ano"></h3>
+                    <button onclick="mesProximo()">›</button>
+                </div>
+                
+                <div style="font-size:11px;color:#666;margin-bottom:12px;display:flex;gap:12px;">
+                    <span>🔴 Pendente</span>
+                    <span>🟡 Aprovado</span>
+                    <span>🟢 Pago</span>
+                </div>
+                
+                <div class="cal-days" id="cal-grid"></div>
+                
+                <div id="cal-detalhes" style="display:none;">
+                    <div class="card" style="margin-bottom:0;">
+                        <h3 style="font-size:14px;margin-bottom:10px;" id="det-data"></h3>
+                        <div id="det-items"></div>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -378,24 +517,38 @@
         <div class="screen" id="screen-pagamentos">
             <div class="card">
                 <h2>💰 Relatório de Pagamentos</h2>
+                
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:12px;color:#666;font-weight:500;margin-bottom:6px;display:block;">Filtros rápidos:</label>
+                    <div class="filter-group">
+                        <button class="filter-btn" onclick="filtroRapido(7)">Últimos 7 dias</button>
+                        <button class="filter-btn" onclick="filtroRapido('semana')">Semana passada</button>
+                        <button class="filter-btn" onclick="filtroRapido('mes')">Mês atual</button>
+                        <button class="filter-btn" onclick="filtroRapido('mes-ant')">Mês passado</button>
+                        <button class="filter-btn" onclick="filtroRapido('tudo')">Todo período</button>
+                    </div>
+                </div>
+                
                 <div class="row2">
                     <div class="field" style="margin-bottom:0;">
                         <label>De</label>
-                        <input type="date" id="tab-de">
+                        <input type="date" id="tab-de" onchange="renderTab()">
                     </div>
                     <div class="field" style="margin-bottom:0;">
                         <label>Até</label>
-                        <input type="date" id="tab-ate">
+                        <input type="date" id="tab-ate" onchange="renderTab()">
                     </div>
                 </div>
             </div>
+            
+            <div id="tab-lista"></div>
         </div>
         
         <!-- CADASTROS -->
         <div class="screen" id="screen-cadastros">
             <div class="card">
                 <h2>⚙️ Cadastros</h2>
-                <p style="font-size:12px;color:#666;">Edite os cadastros na aba de Configurações.</p>
+                <p style="font-size:12px;color:#666;">Seção de cadastros em desenvolvimento.</p>
             </div>
         </div>
     </div>
@@ -404,11 +557,9 @@
         // CONFIGURAÇÃO
         var SHEET_ID = "1TVYsc9GnaK_T1YILkdgBOJSyDA4CZbEyvzk47Izr-go";
         
-        // DETECTAR TIPO DE ACESSO PELA URL
         var urlParams = new URLSearchParams(window.location.search);
-        var tipoAcesso = urlParams.get('tipo') || 'gestor'; // padrão: gestor
+        var tipoAcesso = urlParams.get('tipo') || 'gestor';
         
-        // Dados em memória (em produção, vem do Google Sheets)
         var db = {
             funcionarios: [
                 { nome: "Maria Silva", cargo: "Cuidadora" },
@@ -429,12 +580,15 @@
         };
         
         var hoje = new Date();
+        var calMes = hoje.getMonth();
+        var calAno = hoje.getFullYear();
         
-        // CONFIGURAR ACESSO BASEADO NA URL
         window.addEventListener('DOMContentLoaded', function() {
             configurarAcesso();
             populateSelects();
             renderRec();
+            renderCal();
+            initTabDates();
             if (tipoAcesso === 'enfermeira') renderEnf();
         });
         
@@ -459,16 +613,11 @@
                 show('enfermeira');
             } else {
                 banner.textContent = '👨‍💼 Acesso Gestor — Controle Total';
-                buttons[0].disabled = false;
-                buttons[1].disabled = false;
-                buttons[2].disabled = false;
-                buttons[3].disabled = false;
-                buttons[4].disabled = false;
+                buttons.forEach(b => b.disabled = false);
             }
         }
         
         function show(s) {
-            // Verificar permissões
             if (tipoAcesso === 'funcionario' && s !== 'checkin') {
                 alert('❌ Acesso negado. Apenas Check-in disponível.');
                 return;
@@ -488,6 +637,8 @@
             
             if (s === 'checkin') { resetGate(); renderRec(); }
             if (s === 'enfermeira') { renderEnf(); }
+            if (s === 'calendario') { renderCal(); }
+            if (s === 'pagamentos') { renderTab(); }
         }
         
         function resetGate() {
@@ -565,6 +716,7 @@
                 func: func,
                 tipo: tipo,
                 data: hoje.toLocaleDateString('pt-BR'),
+                dataObj: new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()),
                 hora: hoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
                 valor: t.valor,
                 status: 'pendente',
@@ -638,6 +790,7 @@
             );
             localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
             renderEnf();
+            renderCal();
         }
         
         function rejeitar(id) {
@@ -646,6 +799,166 @@
             );
             localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
             renderEnf();
+            renderCal();
+        }
+        
+        // CALENDÁRIO
+        function renderCal() {
+            var meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            document.getElementById('cal-mes-ano').textContent = meses[calMes] + ' ' + calAno;
+            
+            var primeiro = new Date(calAno, calMes, 1).getDay();
+            var diasMes = new Date(calAno, calMes + 1, 0).getDate();
+            var diasMesAnt = new Date(calAno, calMes, 0).getDate();
+            
+            var dows = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
+            var html = dows.map(d => '<div class="cal-day-name">' + d + '</div>').join('');
+            
+            for (var i = primeiro - 1; i >= 0; i--) {
+                html += '<div class="cal-day other-month">' + (diasMesAnt - i) + '</div>';
+            }
+            
+            for (var d = 1; d <= diasMes; d++) {
+                var dataObj = new Date(calAno, calMes, d);
+                var plantoesDia = db.plantoes.filter(p => 
+                    p.dataObj.getFullYear() === calAno && 
+                    p.dataObj.getMonth() === calMes && 
+                    p.dataObj.getDate() === d
+                );
+                
+                var statusClass = '';
+                if (plantoesDia.some(p => p.status === 'pago')) {
+                    statusClass = 'paid';
+                } else if (plantoesDia.some(p => p.status === 'aprovado')) {
+                    statusClass = 'approved';
+                } else if (plantoesDia.some(p => p.status === 'pendente')) {
+                    statusClass = 'pending';
+                }
+                
+                html += '<div class="cal-day ' + statusClass + '" onclick="selecionarDia(' + d + ')">' + d;
+                if (plantoesDia.length > 0) {
+                    html += '<div class="dot"></div>';
+                }
+                html += '</div>';
+            }
+            
+            var proximoMes = new Date(calAno, calMes + 1, 1).getDay();
+            for (var i = 1; i < (42 - primeiro - diasMes); i++) {
+                html += '<div class="cal-day other-month">' + i + '</div>';
+            }
+            
+            document.getElementById('cal-grid').innerHTML = html;
+        }
+        
+        function mesAnterior() {
+            calMes--;
+            if (calMes < 0) { calMes = 11; calAno--; }
+            renderCal();
+        }
+        
+        function mesProximo() {
+            calMes++;
+            if (calMes > 11) { calMes = 0; calAno++; }
+            renderCal();
+        }
+        
+        function selecionarDia(d) {
+            var meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+            var plantoesDia = db.plantoes.filter(p => 
+                p.dataObj.getFullYear() === calAno && 
+                p.dataObj.getMonth() === calMes && 
+                p.dataObj.getDate() === d
+            );
+            
+            var det = document.getElementById('cal-detalhes');
+            if (!plantoesDia.length) {
+                det.style.display = 'none';
+                return;
+            }
+            
+            det.style.display = 'block';
+            document.getElementById('det-data').textContent = d + ' de ' + meses[calMes] + ' de ' + calAno + ' — ' + plantoesDia.length + ' plantão(ões)';
+            document.getElementById('det-items').innerHTML = plantoesDia.map(p => `
+                <div class="item">
+                    <div class="item-head">
+                        <span class="item-name">${p.func}</span>
+                        <span class="badge badge-${p.status === 'pendente' ? 'warn' : p.status === 'aprovado' ? 'ok' : 'danger'}">${p.status}</span>
+                    </div>
+                    <div class="item-sub">${p.tipo} · ${p.hora} · R$${p.valor}</div>
+                </div>
+            `).join('');
+        }
+        
+        // PAGAMENTOS
+        function initTabDates() {
+            var de = document.getElementById('tab-de');
+            var ate = document.getElementById('tab-ate');
+            
+            de.valueAsDate = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+            ate.valueAsDate = hoje;
+        }
+        
+        function filtroRapido(tipo) {
+            var de = new Date();
+            var ate = new Date();
+            
+            if (tipo === 7) {
+                de.setDate(ate.getDate() - 7);
+            } else if (tipo === 'semana') {
+                ate.setDate(ate.getDate() - ate.getDay());
+                de.setDate(ate.getDate() - 7);
+            } else if (tipo === 'mes') {
+                de = new Date(ate.getFullYear(), ate.getMonth(), 1);
+            } else if (tipo === 'mes-ant') {
+                de = new Date(ate.getFullYear(), ate.getMonth() - 1, 1);
+                ate = new Date(ate.getFullYear(), ate.getMonth(), 0);
+            } else if (tipo === 'tudo') {
+                de = new Date(2000, 0, 1);
+            }
+            
+            document.getElementById('tab-de').valueAsDate = de;
+            document.getElementById('tab-ate').valueAsDate = ate;
+            renderTab();
+        }
+        
+        function renderTab() {
+            var deVal = document.getElementById('tab-de').value;
+            var ateVal = document.getElementById('tab-ate').value;
+            var de = deVal ? new Date(deVal + 'T00:00:00') : null;
+            var ate = ateVal ? new Date(ateVal + 'T23:59:59') : null;
+            
+            var filtrados = db.plantoes.filter(p => {
+                if (p.status !== 'aprovado' && !p.pago) return false;
+                if (de && p.dataObj < de) return false;
+                if (ate && p.dataObj > ate) return false;
+                return true;
+            });
+            
+            var el = document.getElementById('tab-lista');
+            
+            if (!filtrados.length) {
+                el.innerHTML = '<div class="card"><p style="font-size:12px;color:#666;">Nenhum plantão neste período.</p></div>';
+                return;
+            }
+            
+            var html = '<div class="card"><table class="payment-table"><thead><tr><th>Data</th><th>Funcionário</th><th>Tipo</th><th>Valor</th><th>Status</th></tr></thead><tbody>';
+            
+            filtrados.forEach(p => {
+                html += '<tr>';
+                html += '<td>' + p.data + '</td>';
+                html += '<td>' + p.func + '</td>';
+                html += '<td style="font-size:11px;">' + p.tipo + '</td>';
+                html += '<td>R$' + p.valor + '</td>';
+                html += '<td><span class="badge badge-' + (p.pago ? 'ok' : 'warn') + '">' + (p.pago ? 'Pago' : 'Aprovado') + '</span></td>';
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            var total = filtrados.reduce((s, p) => s + p.valor, 0);
+            html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);"><strong>Total: R$' + total + '</strong></div>';
+            html += '</div>';
+            
+            el.innerHTML = html;
         }
     </script>
 </body>
