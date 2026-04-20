@@ -447,7 +447,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
         // CONFIGURAÇÃO — MUDE AQUI
-        var SHEET_ID = "COLOQUE_SEU_ID_AQUI"; // ID da sua planilha
+        var SHEET_ID = "1TVYsc9GnaK_T1YILkdgBOJSyDA4CZbEyvzk47Izr-go"; // ID da sua planilha
         
         var db = {
             tipos: [
