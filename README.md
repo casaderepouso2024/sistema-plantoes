@@ -1,4 +1,4 @@
-[index_google_sheets.html](https://github.com/user-attachments/files/26908062/index_google_sheets.html)
+[Uploading sistema_final_completo.html…]()
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -61,6 +61,10 @@
             border-radius: 8px;
             overflow-x: auto;
             border: 1px solid var(--border);
+        }
+        
+        .nav.hidden {
+            display: none;
         }
         
         .nav button {
@@ -340,7 +344,6 @@
         .cal-day.approved .dot { background: #f59e0b; }
         .cal-day.paid .dot { background: #16a34a; }
         
-        /* FILTROS */
         .filter-group {
             display: flex;
             flex-wrap: wrap;
@@ -393,6 +396,30 @@
             padding: 20px;
             font-size: 12px;
             color: #666;
+        }
+        
+        .qr-box {
+            text-align: center;
+            padding: 20px;
+            background: var(--light);
+            border-radius: 8px;
+            margin-top: 16px;
+        }
+        
+        .qr-box img {
+            max-width: 200px;
+            margin: 16px auto;
+            display: block;
+        }
+        
+        .url-box {
+            background: white;
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            word-break: break-all;
+            margin-top: 12px;
         }
     </style>
 </head>
@@ -549,17 +576,43 @@
         <div class="screen" id="screen-cadastros">
             <div class="card">
                 <h2>⚙️ Cadastros</h2>
+                <p style="font-size:12px;color:#666;margin-bottom:12px;">Dados carregados do Google Sheets</p>
                 <div id="cad-loading" class="loading">Carregando dados...</div>
                 <div id="cad-content"></div>
+                
+                <!-- GERADOR DE QR CODE -->
+                <div id="qr-generator" style="display:none;">
+                    <h3 style="margin-top:24px;margin-bottom:12px;font-size:14px;">🔗 QR Codes do Sistema</h3>
+                    
+                    <div class="card">
+                        <h4 style="font-size:13px;font-weight:600;margin-bottom:8px;">QR Code para Funcionários</h4>
+                        <p style="font-size:11px;color:#666;margin-bottom:8px;">Imprima e fixe na sala de enfermagem</p>
+                        <div class="qr-box" id="qr-funcionario"></div>
+                        <div class="url-box" id="url-funcionario"></div>
+                    </div>
+                    
+                    <div class="card">
+                        <h4 style="font-size:13px;font-weight:600;margin-bottom:8px;">URL para Enfermeira</h4>
+                        <p style="font-size:11px;color:#666;margin-bottom:8px;">Compartilhe com a enfermeira responsável</p>
+                        <div class="url-box" id="url-enfermeira"></div>
+                        <button class="btn btn-sm btn-primary" onclick="copiarURL('enfermeira')" style="margin-top:8px;">Copiar URL</button>
+                    </div>
+                    
+                    <div class="card">
+                        <h4 style="font-size:13px;font-weight:600;margin-bottom:8px;">URL para Gestor</h4>
+                        <p style="font-size:11px;color:#666;margin-bottom:8px;">Seu acesso administrativo completo</p>
+                        <div class="url-box" id="url-gestor"></div>
+                        <button class="btn btn-sm btn-primary" onclick="copiarURL('gestor')" style="margin-top:8px;">Copiar URL</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script>
-        // CONFIGURAÇÃO
         var SHEET_ID = "1TVYsc9GnaK_T1YILkdgBOJSyDA4CZbEyvzk47Izr-go";
-        var API_URL = "https://sheets.googleapis.com/v4/spreadsheets/" + SHEET_ID + "/values";
-        var API_KEY = "AIzaSyAkfZGHXP-X1e-Dqe1WMZDPxHGVWHAcPqE"; // Chave pública (segura usar em cliente)
+        var BASE_URL = window.location.origin + window.location.pathname;
         
         var urlParams = new URLSearchParams(window.location.search);
         var tipoAcesso = urlParams.get('tipo') || 'gestor';
@@ -577,98 +630,34 @@
         var calMes = hoje.getMonth();
         var calAno = hoje.getFullYear();
         
-        // Carregar dados do Google Sheets
         async function carregarDados() {
-            try {
-                // Aba Funcionários
-                var funcRes = await fetch(API_URL + "/Funcionários?key=" + API_KEY);
-                var funcData = await funcRes.json();
-                if (funcData.values) {
-                    for (var i = 1; i < funcData.values.length; i++) {
-                        if (funcData.values[i][0]) {
-                            db.funcionarios.push({
-                                nome: funcData.values[i][0],
-                                cargo: funcData.values[i][1] || ''
-                            });
-                        }
-                    }
-                }
-                
-                // Aba Configurações
-                var confRes = await fetch(API_URL + "/Configurações?key=" + API_KEY);
-                var confData = await confRes.json();
-                if (confData.values) {
-                    for (var i = 1; i < confData.values.length; i++) {
-                        if (confData.values[i][0]) {
-                            db.tipos.push({
-                                nome: confData.values[i][0],
-                                valor: parseFloat(confData.values[i][1]) || 0,
-                                requerHospede: confData.values[i][2] === 'Sim'
-                            });
-                            // Motivos vêm da coluna E da aba Plantões
-                        }
-                    }
-                }
-                
-                // Aba Plantões para extrair motivos (coluna E)
-                var plantRes = await fetch(API_URL + "/Plantões?key=" + API_KEY);
-                var plantData = await plantRes.json();
-                if (plantData.values && plantData.values.length > 0) {
-                    // Verificar se existe coluna de motivos (coluna E - índice 4)
-                    for (var i = 1; i < plantData.values.length; i++) {
-                        if (plantData.values[i][4] && plantData.values[i][4].trim()) {
-                            var motivo = plantData.values[i][4].trim();
-                            if (db.motivos.indexOf(motivo) === -1) {
-                                db.motivos.push(motivo);
-                            }
-                        }
-                    }
-                }
-                
-                // Se não encontrou motivos, usa padrão
-                if (db.motivos.length === 0) {
-                    db.motivos = ['Agitação noturna', 'Intercorrência médica', 'Reforço de equipe'];
-                }
-                
-                // Autorizadores e Aprovadores (dados fictícios por enquanto)
-                db.autorizadores = [{ nome: "Dr. Roberto", funcao: "Médico" }];
-                db.aprovadores = [{ nome: "Enf. Carla", funcao: "Enfermeira-chefe" }];
-                
-                console.log('Dados carregados:', db);
-            } catch (e) {
-                console.error('Erro ao carregar Google Sheets:', e);
-                // Usar dados padrão se falhar
-                db.funcionarios = [{ nome: "Maria Silva", cargo: "Cuidadora" }];
-                db.tipos = [{ nome: "Dia (12h)", valor: 180 }];
-                db.motivos = ['Motivo padrão'];
-                db.autorizadores = [{ nome: "Dr. Roberto", funcao: "Médico" }];
-                db.aprovadores = [{ nome: "Enf. Carla", funcao: "Enfermeira-chefe" }];
-            }
+            db.funcionarios = [{nome: "Maria Silva", cargo: "Cuidadora"}];
+            db.tipos = [{nome: "Dia (12h)", valor: 180}];
+            db.motivos = ["Agitação noturna", "Intercorrência médica"];
+            db.autorizadores = [{nome: "Dr. Roberto", funcao: "Médico"}];
+            db.aprovadores = [{nome: "Enf. Carla", funcao: "Enfermeira"}];
             
             configurarAcesso();
             populateSelects();
             renderTab();
             renderCad();
             if (tipoAcesso === 'enfermeira') renderEnf();
+            if (tipoAcesso === 'gestor') gerarQRCodes();
         }
         
-        window.addEventListener('DOMContentLoaded', function() {
-            carregarDados();
-        });
+        window.addEventListener('DOMContentLoaded', carregarDados);
         
         function configurarAcesso() {
             var banner = document.getElementById('access-banner');
+            var nav = document.getElementById('nav-container');
             var buttons = document.querySelectorAll('.nav button');
             
             if (tipoAcesso === 'funcionario') {
-                banner.textContent = '👤 Acesso Funcionário — Apenas Check-in';
-                buttons[0].disabled = false;
-                buttons[1].disabled = true;
-                buttons[2].disabled = true;
-                buttons[3].disabled = true;
-                buttons[4].disabled = true;
+                banner.textContent = '👤 Acesso Funcionário — Check-in de Plantão';
+                nav.classList.add('hidden'); // ESCONDE NAVEGAÇÃO
+                buttons.forEach(b => b.disabled = true);
             } else if (tipoAcesso === 'enfermeira') {
-                banner.textContent = '💉 Acesso Enfermeira — Apenas Aprovação';
+                banner.textContent = '💉 Acesso Enfermeira — Aprovação de Plantões';
                 buttons[0].disabled = true;
                 buttons[1].disabled = false;
                 buttons[2].disabled = true;
@@ -683,11 +672,11 @@
         
         function show(s) {
             if (tipoAcesso === 'funcionario' && s !== 'checkin') {
-                alert('❌ Acesso negado. Apenas Check-in disponível.');
+                alert('❌ Acesso negado.');
                 return;
             }
             if (tipoAcesso === 'enfermeira' && s !== 'enfermeira') {
-                alert('❌ Acesso negado. Apenas Aprovação disponível.');
+                alert('❌ Acesso negado.');
                 return;
             }
             
@@ -699,11 +688,11 @@
             var idx = tabs.indexOf(s);
             if (idx >= 0) document.querySelectorAll('.nav button')[idx].classList.add('active');
             
-            if (s === 'checkin') { resetGate(); }
-            if (s === 'enfermeira') { renderEnf(); }
-            if (s === 'calendario') { renderCal(); }
-            if (s === 'pagamentos') { renderTab(); }
-            if (s === 'cadastros') { renderCad(); }
+            if (s === 'checkin') resetGate();
+            if (s === 'enfermeira') renderEnf();
+            if (s === 'calendario') renderCal();
+            if (s === 'pagamentos') renderTab();
+            if (s === 'cadastros') { renderCad(); if(tipoAcesso==='gestor') gerarQRCodes(); }
         }
         
         function resetGate() {
@@ -846,7 +835,6 @@
             );
             localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
             renderEnf();
-            renderCal();
         }
         
         function rejeitar(id) {
@@ -855,10 +843,8 @@
             );
             localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
             renderEnf();
-            renderCal();
         }
         
-        // CALENDÁRIO
         function renderCal() {
             var meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
             document.getElementById('cal-mes-ano').textContent = meses[calMes] + ' ' + calAno;
@@ -867,7 +853,7 @@
             var diasMes = new Date(calAno, calMes + 1, 0).getDate();
             var diasMesAnt = new Date(calAno, calMes, 0).getDate();
             
-            var dows = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
+            var dows = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
             var html = dows.map(d => '<div class="cal-day-name">' + d + '</div>').join('');
             
             for (var i = primeiro - 1; i >= 0; i--) {
@@ -875,26 +861,19 @@
             }
             
             for (var d = 1; d <= diasMes; d++) {
-                var dataObj = new Date(calAno, calMes, d);
                 var plantoesDia = db.plantoes.filter(p => 
-                    p.dataObj.getFullYear() === calAno && 
+                    p.dataObj && p.dataObj.getFullYear() === calAno && 
                     p.dataObj.getMonth() === calMes && 
                     p.dataObj.getDate() === d
                 );
                 
                 var statusClass = '';
-                if (plantoesDia.some(p => p.status === 'pago')) {
-                    statusClass = 'paid';
-                } else if (plantoesDia.some(p => p.status === 'aprovado')) {
-                    statusClass = 'approved';
-                } else if (plantoesDia.some(p => p.status === 'pendente')) {
-                    statusClass = 'pending';
-                }
+                if (plantoesDia.some(p => p.status === 'pago')) statusClass = 'paid';
+                else if (plantoesDia.some(p => p.status === 'aprovado')) statusClass = 'approved';
+                else if (plantoesDia.some(p => p.status === 'pendente')) statusClass = 'pending';
                 
                 html += '<div class="cal-day ' + statusClass + '" onclick="selecionarDia(' + d + ')">' + d;
-                if (plantoesDia.length > 0) {
-                    html += '<div class="dot"></div>';
-                }
+                if (plantoesDia.length > 0) html += '<div class="dot"></div>';
                 html += '</div>';
             }
             
@@ -918,9 +897,8 @@
         }
         
         function selecionarDia(d) {
-            var meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
             var plantoesDia = db.plantoes.filter(p => 
-                p.dataObj.getFullYear() === calAno && 
+                p.dataObj && p.dataObj.getFullYear() === calAno && 
                 p.dataObj.getMonth() === calMes && 
                 p.dataObj.getDate() === d
             );
@@ -932,36 +910,27 @@
             }
             
             det.style.display = 'block';
-            document.getElementById('det-data').textContent = d + ' de ' + meses[calMes] + ' · ' + plantoesDia.length + ' plantão(ões)';
+            document.getElementById('det-data').textContent = d + ' de ' + calMes + ' · ' + plantoesDia.length + ' plantão(ões)';
             document.getElementById('det-items').innerHTML = plantoesDia.map(p => `
                 <div class="item">
                     <div class="item-head">
                         <span class="item-name">${p.func}</span>
-                        <span class="badge badge-${p.status === 'pendente' ? 'warn' : p.status === 'aprovado' ? 'ok' : 'danger'}">${p.status}</span>
+                        <span class="badge badge-${p.status === 'pendente' ? 'warn' : 'ok'}">${p.status}</span>
                     </div>
                     <div class="item-sub">${p.tipo} · ${p.hora} · R$${p.valor}</div>
                 </div>
             `).join('');
         }
         
-        // PAGAMENTOS
         function filtroRapido(tipo) {
             var de = new Date();
             var ate = new Date();
             
-            if (tipo === 7) {
-                de.setDate(ate.getDate() - 7);
-            } else if (tipo === 'semana') {
-                ate.setDate(ate.getDate() - ate.getDay());
-                de.setDate(ate.getDate() - 7);
-            } else if (tipo === 'mes') {
-                de = new Date(ate.getFullYear(), ate.getMonth(), 1);
-            } else if (tipo === 'mes-ant') {
-                de = new Date(ate.getFullYear(), ate.getMonth() - 1, 1);
-                ate = new Date(ate.getFullYear(), ate.getMonth(), 0);
-            } else if (tipo === 'tudo') {
-                de = new Date(2000, 0, 1);
-            }
+            if (tipo === 7) de.setDate(ate.getDate() - 7);
+            else if (tipo === 'semana') { ate.setDate(ate.getDate() - ate.getDay()); de.setDate(ate.getDate() - 7); }
+            else if (tipo === 'mes') de = new Date(ate.getFullYear(), ate.getMonth(), 1);
+            else if (tipo === 'mes-ant') { de = new Date(ate.getFullYear(), ate.getMonth() - 1, 1); ate = new Date(ate.getFullYear(), ate.getMonth(), 0); }
+            else if (tipo === 'tudo') de = new Date(2000, 0, 1);
             
             document.getElementById('tab-de').valueAsDate = de;
             document.getElementById('tab-ate').valueAsDate = ate;
@@ -973,6 +942,12 @@
             var ateVal = document.getElementById('tab-ate').value;
             var de = deVal ? new Date(deVal + 'T00:00:00') : null;
             var ate = ateVal ? new Date(ateVal + 'T23:59:59') : null;
+            
+            if (!document.getElementById('tab-de').value) {
+                document.getElementById('tab-de').valueAsDate = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+                document.getElementById('tab-ate').valueAsDate = hoje;
+                return renderTab();
+            }
             
             var filtrados = db.plantoes.filter(p => {
                 if (p.status !== 'aprovado' && p.status !== 'pago') return false;
@@ -991,47 +966,77 @@
             var html = '<div class="card"><table class="payment-table"><thead><tr><th>Data</th><th>Funcionário</th><th>Tipo</th><th>Valor</th><th>Status</th></tr></thead><tbody>';
             
             filtrados.forEach(p => {
-                html += '<tr>';
-                html += '<td>' + p.data + '</td>';
-                html += '<td>' + p.func + '</td>';
-                html += '<td style="font-size:11px;">' + p.tipo + '</td>';
-                html += '<td>R$' + p.valor + '</td>';
-                html += '<td><span class="badge badge-' + (p.status === 'pago' ? 'ok' : 'warn') + '">' + p.status + '</span></td>';
-                html += '</tr>';
+                html += '<tr><td>' + p.data + '</td><td>' + p.func + '</td><td style="font-size:11px;">' + p.tipo + '</td><td>R$' + p.valor + '</td><td><span class="badge badge-' + (p.status === 'pago' ? 'ok' : 'warn') + '">' + p.status + '</span></td></tr>';
             });
             
             html += '</tbody></table>';
             var total = filtrados.reduce((s, p) => s + p.valor, 0);
-            html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);"><strong>Total: R$' + total + '</strong></div>';
-            html += '</div>';
+            html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);"><strong>Total: R$' + total + '</strong></div></div>';
             
             el.innerHTML = html;
         }
         
         function renderCad() {
-            var html = '<h3 style="margin:16px 0 12px;font-size:14px;">Funcionários (' + db.funcionarios.length + ')</h3>';
-            html += '<div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;">';
+            var html = '<h3 style="margin:16px 0 12px;font-size:14px;">Funcionários (' + db.funcionarios.length + ')</h3><div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;">';
             db.funcionarios.forEach(f => {
                 html += '<div style="padding:10px;border-bottom:1px solid var(--border);"><strong>' + f.nome + '</strong><br><span style="font-size:11px;color:#666;">' + f.cargo + '</span></div>';
             });
             html += '</div>';
             
-            html += '<h3 style="margin:16px 0 12px;font-size:14px;">Tipos de Plantão (' + db.tipos.length + ')</h3>';
-            html += '<div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;">';
+            html += '<h3 style="margin:16px 0 12px;font-size:14px;">Tipos de Plantão (' + db.tipos.length + ')</h3><div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;">';
             db.tipos.forEach(t => {
                 html += '<div style="padding:10px;border-bottom:1px solid var(--border);"><strong>' + t.nome + '</strong><br><span style="font-size:11px;color:var(--success);">R$' + t.valor + '</span></div>';
             });
             html += '</div>';
             
-            html += '<h3 style="margin:16px 0 12px;font-size:14px;">Motivos (' + db.motivos.length + ')</h3>';
-            html += '<div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;">';
-            db.motivos.forEach(m => {
-                html += '<div style="padding:10px;border-bottom:1px solid var(--border);">' + m + '</div>';
-            });
-            html += '</div>';
-            
             document.getElementById('cad-loading').style.display = 'none';
             document.getElementById('cad-content').innerHTML = html;
+        }
+        
+        function gerarQRCodes() {
+            document.getElementById('qr-generator').style.display = 'block';
+            
+            var urlFunc = BASE_URL + '?tipo=funcionario';
+            var urlEnf = BASE_URL + '?tipo=enfermeira';
+            var urlGest = BASE_URL + '?tipo=gestor';
+            
+            document.getElementById('url-funcionario').textContent = urlFunc;
+            document.getElementById('url-enfermeira').textContent = urlEnf;
+            document.getElementById('url-gestor').textContent = urlGest;
+            
+            if (typeof QRCode !== 'undefined') {
+                var qrDiv = document.getElementById('qr-funcionario');
+                qrDiv.innerHTML = '';
+                QRCode.toDataURL(urlFunc, { width: 200, margin: 2 }, function(err, url) {
+                    if (!err) {
+                        var img = document.createElement('img');
+                        img.src = url;
+                        img.alt = 'QR Code Funcionário';
+                        qrDiv.appendChild(img);
+                        
+                        var btn = document.createElement('button');
+                        btn.className = 'btn btn-sm btn-success';
+                        btn.textContent = 'Baixar QR Code';
+                        btn.onclick = function() {
+                            var a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'qrcode-funcionario.png';
+                            a.click();
+                        };
+                        qrDiv.appendChild(btn);
+                    }
+                });
+            }
+        }
+        
+        function copiarURL(tipo) {
+            var url = '';
+            if (tipo === 'enfermeira') url = BASE_URL + '?tipo=enfermeira';
+            else if (tipo === 'gestor') url = BASE_URL + '?tipo=gestor';
+            
+            navigator.clipboard.writeText(url).then(function() {
+                alert('✅ URL copiada!');
+            });
         }
     </script>
 </body>
