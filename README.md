@@ -1,4 +1,4 @@
-[Uploading sistema_final_completo.html…]()
+[SISTEMA_FINAL_SHEETS_QR.html](https://github.com/user-attachments/files/27026408/SISTEMA_FINAL_SHEETS_QR.html)
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -63,9 +63,7 @@
             border: 1px solid var(--border);
         }
         
-        .nav.hidden {
-            display: none;
-        }
+        .nav.hidden { display: none; }
         
         .nav button {
             flex: 1;
@@ -104,9 +102,7 @@
         
         .card h2 { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
         
-        .field {
-            margin-bottom: 12px;
-        }
+        .field { margin-bottom: 12px; }
         
         .field label {
             display: block;
@@ -148,6 +144,9 @@
         .btn-danger { background: var(--danger); color: white; }
         .btn-danger:hover { opacity: 0.9; }
         
+        .btn-warning { background: var(--warning); color: white; }
+        .btn-warning:hover { opacity: 0.9; }
+        
         .btn-sm {
             width: auto;
             padding: 6px 10px;
@@ -176,9 +175,7 @@
             border-left: 4px solid;
         }
         
-        .toast.show {
-            display: block;
-        }
+        .toast.show { display: block; }
         
         .toast.success {
             background: #f0fdf4;
@@ -235,11 +232,7 @@
         .gate-q { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
         .gate-sub { font-size: 12px; color: #666; margin-bottom: 16px; }
         
-        .gate-btns {
-            display: flex;
-            gap: 8px;
-        }
-        
+        .gate-btns { display: flex; gap: 8px; }
         .gate-btns button { flex: 1; }
         
         .alert {
@@ -271,7 +264,6 @@
         .metric-val { font-size: 20px; font-weight: 600; }
         .metric-lbl { font-size: 10px; color: #666; margin-top: 4px; }
         
-        /* CALENDÁRIO */
         .cal-header {
             display: flex;
             justify-content: space-between;
@@ -290,10 +282,7 @@
             font-weight: 600;
         }
         
-        .cal-header h3 {
-            font-size: 16px;
-            font-weight: 600;
-        }
+        .cal-header h3 { font-size: 16px; font-weight: 600; }
         
         .cal-days {
             display: grid;
@@ -325,13 +314,8 @@
             transition: all 0.2s;
         }
         
-        .cal-day:hover {
-            border-color: var(--primary);
-        }
-        
-        .cal-day.other-month {
-            opacity: 0.3;
-        }
+        .cal-day:hover { border-color: var(--primary); }
+        .cal-day.other-month { opacity: 0.3; }
         
         .cal-day .dot {
             width: 6px;
@@ -387,9 +371,7 @@
             border-bottom: 1px solid var(--border);
         }
         
-        .payment-table tr:hover {
-            background: #fafafa;
-        }
+        .payment-table tr:hover { background: #fafafa; }
 
         .loading {
             text-align: center;
@@ -398,27 +380,55 @@
             color: #666;
         }
         
-        .qr-box {
-            text-align: center;
-            padding: 20px;
+        .qr-section {
             background: var(--light);
+            border: 2px dashed var(--border);
             border-radius: 8px;
-            margin-top: 16px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
         }
         
-        .qr-box img {
-            max-width: 200px;
-            margin: 16px auto;
-            display: block;
+        .qr-section h3 {
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: var(--primary);
         }
         
-        .url-box {
+        .qr-code-display {
             background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 16px auto;
+            max-width: 250px;
+        }
+        
+        .qr-code-display img {
+            width: 200px;
+            height: 200px;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .debug-box {
+            background: #f9fafb;
             border: 1px solid var(--border);
-            padding: 12px;
             border-radius: 6px;
+            padding: 12px;
             font-size: 11px;
-            word-break: break-all;
+            font-family: monospace;
+            margin-top: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .error-box {
+            background: #fee2e2;
+            border: 1px solid #dc2626;
+            border-radius: 6px;
+            padding: 12px;
+            color: #991b1b;
+            font-size: 12px;
             margin-top: 12px;
         }
     </style>
@@ -576,33 +586,52 @@
         <div class="screen" id="screen-cadastros">
             <div class="card">
                 <h2>⚙️ Cadastros</h2>
-                <p style="font-size:12px;color:#666;margin-bottom:12px;">Dados carregados do Google Sheets</p>
-                <div id="cad-loading" class="loading">Carregando dados...</div>
-                <div id="cad-content"></div>
                 
-                <!-- GERADOR DE QR CODE -->
-                <div id="qr-generator" style="display:none;">
-                    <h3 style="margin-top:24px;margin-bottom:12px;font-size:14px;">🔗 QR Codes do Sistema</h3>
+                <button class="btn btn-warning" onclick="carregarDados()" style="margin-bottom:12px;">🔄 Recarregar dados do Google Sheets</button>
+                
+                <div id="cad-status"></div>
+                <div id="cad-content"></div>
+            </div>
+            
+            <!-- QR CODE GENERATOR -->
+            <div id="qr-generator-section" style="display:none;">
+                <div class="qr-section">
+                    <h3>📱 QR Code para Funcionários</h3>
+                    <p style="font-size:12px;color:#666;margin-bottom:12px;">Imprima e fixe na sala de enfermagem</p>
                     
-                    <div class="card">
-                        <h4 style="font-size:13px;font-weight:600;margin-bottom:8px;">QR Code para Funcionários</h4>
-                        <p style="font-size:11px;color:#666;margin-bottom:8px;">Imprima e fixe na sala de enfermagem</p>
-                        <div class="qr-box" id="qr-funcionario"></div>
-                        <div class="url-box" id="url-funcionario"></div>
+                    <button class="btn btn-primary" onclick="gerarQRCode()" id="btn-gerar-qr">
+                        🎨 GERAR QR CODE
+                    </button>
+                    
+                    <div id="qr-display" style="display:none;">
+                        <div class="qr-code-display">
+                            <div id="qrcode"></div>
+                        </div>
+                        
+                        <button class="btn btn-success" onclick="baixarQRCode()">
+                            ⬇️ Baixar QR Code (PNG)
+                        </button>
+                        
+                        <div style="margin-top:16px;font-size:11px;color:#666;">
+                            <strong>URL do QR Code:</strong><br>
+                            <div style="background:white;padding:8px;border-radius:4px;margin-top:6px;word-break:break-all;" id="qr-url"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3 style="font-size:14px;margin-bottom:12px;">🔗 URLs de Acesso</h3>
+                    
+                    <div style="margin-bottom:16px;">
+                        <strong style="font-size:12px;">Enfermeira:</strong>
+                        <div style="background:var(--light);padding:8px;border-radius:4px;font-size:11px;margin-top:4px;word-break:break-all;" id="url-enf"></div>
+                        <button class="btn btn-sm btn-primary" onclick="copiarURL('enfermeira')" style="margin-top:6px;">Copiar</button>
                     </div>
                     
-                    <div class="card">
-                        <h4 style="font-size:13px;font-weight:600;margin-bottom:8px;">URL para Enfermeira</h4>
-                        <p style="font-size:11px;color:#666;margin-bottom:8px;">Compartilhe com a enfermeira responsável</p>
-                        <div class="url-box" id="url-enfermeira"></div>
-                        <button class="btn btn-sm btn-primary" onclick="copiarURL('enfermeira')" style="margin-top:8px;">Copiar URL</button>
-                    </div>
-                    
-                    <div class="card">
-                        <h4 style="font-size:13px;font-weight:600;margin-bottom:8px;">URL para Gestor</h4>
-                        <p style="font-size:11px;color:#666;margin-bottom:8px;">Seu acesso administrativo completo</p>
-                        <div class="url-box" id="url-gestor"></div>
-                        <button class="btn btn-sm btn-primary" onclick="copiarURL('gestor')" style="margin-top:8px;">Copiar URL</button>
+                    <div>
+                        <strong style="font-size:12px;">Gestor:</strong>
+                        <div style="background:var(--light);padding:8px;border-radius:4px;font-size:11px;margin-top:4px;word-break:break-all;" id="url-gest"></div>
+                        <button class="btn btn-sm btn-primary" onclick="copiarURL('gestor')" style="margin-top:6px;">Copiar</button>
                     </div>
                 </div>
             </div>
@@ -612,6 +641,7 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script>
         var SHEET_ID = "1TVYsc9GnaK_T1YILkdgBOJSyDA4CZbEyvzk47Izr-go";
+        var API_KEY = "AIzaSyAkfZGHXP-X1e-Dqe1WMZDPxHGVWHAcPqE";
         var BASE_URL = window.location.origin + window.location.pathname;
         
         var urlParams = new URLSearchParams(window.location.search);
@@ -629,23 +659,149 @@
         var hoje = new Date();
         var calMes = hoje.getMonth();
         var calAno = hoje.getFullYear();
+        var qrCodeObj = null;
         
         async function carregarDados() {
-            db.funcionarios = [{nome: "Maria Silva", cargo: "Cuidadora"}];
-            db.tipos = [{nome: "Dia (12h)", valor: 180}];
-            db.motivos = ["Agitação noturna", "Intercorrência médica"];
-            db.autorizadores = [{nome: "Dr. Roberto", funcao: "Médico"}];
-            db.aprovadores = [{nome: "Enf. Carla", funcao: "Enfermeira"}];
+            var statusEl = document.getElementById('cad-status');
+            statusEl.innerHTML = '<div class="loading">🔄 Carregando dados do Google Sheets...</div>';
             
-            configurarAcesso();
-            populateSelects();
-            renderTab();
-            renderCad();
-            if (tipoAcesso === 'enfermeira') renderEnf();
-            if (tipoAcesso === 'gestor') gerarQRCodes();
+            try {
+                console.log('🔍 Tentando carregar dados...');
+                
+                // Funcionários
+                var urlFunc = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Funcionários?key=${API_KEY}`;
+                console.log('📡 URL Funcionários:', urlFunc);
+                
+                var respFunc = await fetch(urlFunc);
+                var dataFunc = await respFunc.json();
+                
+                console.log('📦 Resposta Funcionários:', dataFunc);
+                
+                if (dataFunc.error) {
+                    throw new Error('Erro ao carregar Funcionários: ' + dataFunc.error.message);
+                }
+                
+                db.funcionarios = [];
+                if (dataFunc.values && dataFunc.values.length > 1) {
+                    for (var i = 1; i < dataFunc.values.length; i++) {
+                        if (dataFunc.values[i][0]) {
+                            db.funcionarios.push({
+                                nome: dataFunc.values[i][0],
+                                cargo: dataFunc.values[i][1] || ''
+                            });
+                        }
+                    }
+                }
+                
+                console.log('✅ Funcionários carregados:', db.funcionarios);
+                
+                // Configurações (Tipos de Plantão)
+                var urlConf = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Configurações?key=${API_KEY}`;
+                var respConf = await fetch(urlConf);
+                var dataConf = await respConf.json();
+                
+                console.log('📦 Resposta Configurações:', dataConf);
+                
+                db.tipos = [];
+                if (dataConf.values && dataConf.values.length > 1) {
+                    for (var i = 1; i < dataConf.values.length; i++) {
+                        if (dataConf.values[i][0]) {
+                            db.tipos.push({
+                                nome: dataConf.values[i][0],
+                                valor: parseFloat(dataConf.values[i][1]) || 0
+                            });
+                        }
+                    }
+                }
+                
+                console.log('✅ Tipos carregados:', db.tipos);
+                
+                // Autorizadores
+                var urlAut = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Autorizadores?key=${API_KEY}`;
+                var respAut = await fetch(urlAut);
+                var dataAut = await respAut.json();
+                
+                db.autorizadores = [];
+                if (dataAut.values && dataAut.values.length > 1) {
+                    for (var i = 1; i < dataAut.values.length; i++) {
+                        if (dataAut.values[i][0]) {
+                            db.autorizadores.push({
+                                nome: dataAut.values[i][0],
+                                funcao: dataAut.values[i][1] || ''
+                            });
+                        }
+                    }
+                }
+                
+                // Aprovadores
+                var urlApr = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Aprovadores?key=${API_KEY}`;
+                var respApr = await fetch(urlApr);
+                var dataApr = await respApr.json();
+                
+                db.aprovadores = [];
+                if (dataApr.values && dataApr.values.length > 1) {
+                    for (var i = 1; i < dataApr.values.length; i++) {
+                        if (dataApr.values[i][0]) {
+                            db.aprovadores.push({
+                                nome: dataApr.values[i][0],
+                                funcao: dataApr.values[i][1] || ''
+                            });
+                        }
+                    }
+                }
+                
+                // Motivos da coluna E da aba Plantões
+                var urlPlant = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Plantões?key=${API_KEY}`;
+                var respPlant = await fetch(urlPlant);
+                var dataPlant = await respPlant.json();
+                
+                db.motivos = [];
+                if (dataPlant.values && dataPlant.values.length > 1) {
+                    for (var i = 1; i < dataPlant.values.length; i++) {
+                        if (dataPlant.values[i][4] && dataPlant.values[i][4].trim()) {
+                            var motivo = dataPlant.values[i][4].trim();
+                            if (db.motivos.indexOf(motivo) === -1) {
+                                db.motivos.push(motivo);
+                            }
+                        }
+                    }
+                }
+                
+                if (db.motivos.length === 0) {
+                    db.motivos = ['Agitação noturna', 'Intercorrência médica', 'Reforço de equipe'];
+                }
+                
+                console.log('✅ TODOS OS DADOS CARREGADOS:', db);
+                
+                statusEl.innerHTML = '<div style="background:#dcfce7;color:#166534;padding:10px;border-radius:6px;font-size:12px;">✅ Dados carregados com sucesso!</div>';
+                
+                populateSelects();
+                renderCad();
+                
+            } catch (error) {
+                console.error('❌ ERRO:', error);
+                statusEl.innerHTML = '<div class="error-box"><strong>❌ Erro ao carregar dados:</strong><br>' + error.message + '<br><br><small>Verifique se a planilha está pública e as abas têm os nomes corretos.</small></div>';
+                
+                // Usar dados padrão
+                db.funcionarios = [{nome: "Maria Silva", cargo: "Cuidadora"}];
+                db.tipos = [{nome: "Dia (12h)", valor: 180}];
+                db.autorizadores = [{nome: "Dr. Roberto", funcao: "Médico"}];
+                db.aprovadores = [{nome: "Enf. Carla", funcao: "Enfermeira"}];
+                db.motivos = ["Agitação noturna"];
+                
+                populateSelects();
+                renderCad();
+            }
         }
         
-        window.addEventListener('DOMContentLoaded', carregarDados);
+        window.addEventListener('DOMContentLoaded', function() {
+            configurarAcesso();
+            carregarDados();
+            if (tipoAcesso === 'gestor') {
+                document.getElementById('qr-generator-section').style.display = 'block';
+                mostrarURLs();
+            }
+        });
         
         function configurarAcesso() {
             var banner = document.getElementById('access-banner');
@@ -654,7 +810,7 @@
             
             if (tipoAcesso === 'funcionario') {
                 banner.textContent = '👤 Acesso Funcionário — Check-in de Plantão';
-                nav.classList.add('hidden'); // ESCONDE NAVEGAÇÃO
+                nav.classList.add('hidden');
                 buttons.forEach(b => b.disabled = true);
             } else if (tipoAcesso === 'enfermeira') {
                 banner.textContent = '💉 Acesso Enfermeira — Aprovação de Plantões';
@@ -671,14 +827,8 @@
         }
         
         function show(s) {
-            if (tipoAcesso === 'funcionario' && s !== 'checkin') {
-                alert('❌ Acesso negado.');
-                return;
-            }
-            if (tipoAcesso === 'enfermeira' && s !== 'enfermeira') {
-                alert('❌ Acesso negado.');
-                return;
-            }
+            if (tipoAcesso === 'funcionario' && s !== 'checkin') return;
+            if (tipoAcesso === 'enfermeira' && s !== 'enfermeira') return;
             
             document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
             document.querySelector('#screen-' + s).classList.add('active');
@@ -691,8 +841,7 @@
             if (s === 'checkin') resetGate();
             if (s === 'enfermeira') renderEnf();
             if (s === 'calendario') renderCal();
-            if (s === 'pagamentos') renderTab();
-            if (s === 'cadastros') { renderCad(); if(tipoAcesso==='gestor') gerarQRCodes(); }
+            if (s === 'pagamentos') { initDates(); renderTab(); }
         }
         
         function resetGate() {
@@ -769,7 +918,7 @@
             var tipo = document.getElementById('ci-tipo').value;
             
             if (!func || !tipo) {
-                toast('Preencha todos os campos!', 'error');
+                toast('Preencha funcionário e tipo!', 'error');
                 return;
             }
             
@@ -782,7 +931,7 @@
                 data: hoje.toLocaleDateString('pt-BR'),
                 dataObj: new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()),
                 hora: hoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-                valor: t.valor,
+                valor: t ? t.valor : 0,
                 status: 'pendente',
                 autor: document.getElementById('ci-autor').value || null
             };
@@ -831,7 +980,7 @@
         
         function aprovar(id) {
             db.plantoes = db.plantoes.map(p => 
-                p.id === id ? {...p, status: 'aprovado', aprovadoPor: document.getElementById('enf-quem').value} : p
+                p.id === id ? {...p, status: 'aprovado'} : p
             );
             localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
             renderEnf();
@@ -872,7 +1021,7 @@
                 else if (plantoesDia.some(p => p.status === 'aprovado')) statusClass = 'approved';
                 else if (plantoesDia.some(p => p.status === 'pendente')) statusClass = 'pending';
                 
-                html += '<div class="cal-day ' + statusClass + '" onclick="selecionarDia(' + d + ')">' + d;
+                html += '<div class="cal-day ' + statusClass + '">' + d;
                 if (plantoesDia.length > 0) html += '<div class="dot"></div>';
                 html += '</div>';
             }
@@ -896,30 +1045,11 @@
             renderCal();
         }
         
-        function selecionarDia(d) {
-            var plantoesDia = db.plantoes.filter(p => 
-                p.dataObj && p.dataObj.getFullYear() === calAno && 
-                p.dataObj.getMonth() === calMes && 
-                p.dataObj.getDate() === d
-            );
-            
-            var det = document.getElementById('cal-detalhes');
-            if (!plantoesDia.length) {
-                det.style.display = 'none';
-                return;
+        function initDates() {
+            if (!document.getElementById('tab-de').value) {
+                document.getElementById('tab-de').valueAsDate = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+                document.getElementById('tab-ate').valueAsDate = hoje;
             }
-            
-            det.style.display = 'block';
-            document.getElementById('det-data').textContent = d + ' de ' + calMes + ' · ' + plantoesDia.length + ' plantão(ões)';
-            document.getElementById('det-items').innerHTML = plantoesDia.map(p => `
-                <div class="item">
-                    <div class="item-head">
-                        <span class="item-name">${p.func}</span>
-                        <span class="badge badge-${p.status === 'pendente' ? 'warn' : 'ok'}">${p.status}</span>
-                    </div>
-                    <div class="item-sub">${p.tipo} · ${p.hora} · R$${p.valor}</div>
-                </div>
-            `).join('');
         }
         
         function filtroRapido(tipo) {
@@ -927,9 +1057,7 @@
             var ate = new Date();
             
             if (tipo === 7) de.setDate(ate.getDate() - 7);
-            else if (tipo === 'semana') { ate.setDate(ate.getDate() - ate.getDay()); de.setDate(ate.getDate() - 7); }
             else if (tipo === 'mes') de = new Date(ate.getFullYear(), ate.getMonth(), 1);
-            else if (tipo === 'mes-ant') { de = new Date(ate.getFullYear(), ate.getMonth() - 1, 1); ate = new Date(ate.getFullYear(), ate.getMonth(), 0); }
             else if (tipo === 'tudo') de = new Date(2000, 0, 1);
             
             document.getElementById('tab-de').valueAsDate = de;
@@ -938,105 +1066,72 @@
         }
         
         function renderTab() {
-            var deVal = document.getElementById('tab-de').value;
-            var ateVal = document.getElementById('tab-ate').value;
-            var de = deVal ? new Date(deVal + 'T00:00:00') : null;
-            var ate = ateVal ? new Date(ateVal + 'T23:59:59') : null;
-            
-            if (!document.getElementById('tab-de').value) {
-                document.getElementById('tab-de').valueAsDate = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-                document.getElementById('tab-ate').valueAsDate = hoje;
-                return renderTab();
-            }
-            
-            var filtrados = db.plantoes.filter(p => {
-                if (p.status !== 'aprovado' && p.status !== 'pago') return false;
-                if (de && p.dataObj < de) return false;
-                if (ate && p.dataObj > ate) return false;
-                return true;
-            });
-            
             var el = document.getElementById('tab-lista');
+            var filtrados = db.plantoes.filter(p => p.status === 'aprovado' || p.status === 'pago');
             
             if (!filtrados.length) {
-                el.innerHTML = '<div class="card"><p style="font-size:12px;color:#666;">Nenhum plantão neste período.</p></div>';
+                el.innerHTML = '<div class="card"><p style="font-size:12px;color:#666;">Nenhum plantão.</p></div>';
                 return;
             }
             
-            var html = '<div class="card"><table class="payment-table"><thead><tr><th>Data</th><th>Funcionário</th><th>Tipo</th><th>Valor</th><th>Status</th></tr></thead><tbody>';
-            
+            var html = '<div class="card"><table class="payment-table"><thead><tr><th>Data</th><th>Func</th><th>Tipo</th><th>Valor</th></tr></thead><tbody>';
             filtrados.forEach(p => {
-                html += '<tr><td>' + p.data + '</td><td>' + p.func + '</td><td style="font-size:11px;">' + p.tipo + '</td><td>R$' + p.valor + '</td><td><span class="badge badge-' + (p.status === 'pago' ? 'ok' : 'warn') + '">' + p.status + '</span></td></tr>';
+                html += '<tr><td>' + p.data + '</td><td>' + p.func + '</td><td>' + p.tipo + '</td><td>R$' + p.valor + '</td></tr>';
             });
-            
-            html += '</tbody></table>';
-            var total = filtrados.reduce((s, p) => s + p.valor, 0);
-            html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);"><strong>Total: R$' + total + '</strong></div></div>';
+            html += '</tbody></table></div>';
             
             el.innerHTML = html;
         }
         
         function renderCad() {
-            var html = '<h3 style="margin:16px 0 12px;font-size:14px;">Funcionários (' + db.funcionarios.length + ')</h3><div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;">';
-            db.funcionarios.forEach(f => {
-                html += '<div style="padding:10px;border-bottom:1px solid var(--border);"><strong>' + f.nome + '</strong><br><span style="font-size:11px;color:#666;">' + f.cargo + '</span></div>';
-            });
+            var html = '<div class="debug-box">';
+            html += '<strong>Funcionários carregados (' + db.funcionarios.length + '):</strong><br>';
+            db.funcionarios.forEach(f => html += '- ' + f.nome + ' (' + f.cargo + ')<br>');
+            html += '<br><strong>Tipos de plantão (' + db.tipos.length + '):</strong><br>';
+            db.tipos.forEach(t => html += '- ' + t.nome + ' (R$' + t.valor + ')<br>');
+            html += '<br><strong>Motivos (' + db.motivos.length + '):</strong><br>';
+            db.motivos.forEach(m => html += '- ' + m + '<br>');
             html += '</div>';
             
-            html += '<h3 style="margin:16px 0 12px;font-size:14px;">Tipos de Plantão (' + db.tipos.length + ')</h3><div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;">';
-            db.tipos.forEach(t => {
-                html += '<div style="padding:10px;border-bottom:1px solid var(--border);"><strong>' + t.nome + '</strong><br><span style="font-size:11px;color:var(--success);">R$' + t.valor + '</span></div>';
-            });
-            html += '</div>';
-            
-            document.getElementById('cad-loading').style.display = 'none';
             document.getElementById('cad-content').innerHTML = html;
         }
         
-        function gerarQRCodes() {
-            document.getElementById('qr-generator').style.display = 'block';
+        function mostrarURLs() {
+            document.getElementById('url-enf').textContent = BASE_URL + '?tipo=enfermeira';
+            document.getElementById('url-gest').textContent = BASE_URL + '?tipo=gestor';
+            document.getElementById('qr-url').textContent = BASE_URL + '?tipo=funcionario';
+        }
+        
+        function gerarQRCode() {
+            var url = BASE_URL + '?tipo=funcionario';
+            var qrDiv = document.getElementById('qrcode');
+            qrDiv.innerHTML = '';
             
-            var urlFunc = BASE_URL + '?tipo=funcionario';
-            var urlEnf = BASE_URL + '?tipo=enfermeira';
-            var urlGest = BASE_URL + '?tipo=gestor';
+            QRCode.toCanvas(url, { width: 200, margin: 2 }, function(error, canvas) {
+                if (error) {
+                    console.error(error);
+                    alert('Erro ao gerar QR Code');
+                    return;
+                }
+                qrDiv.appendChild(canvas);
+                qrCodeObj = canvas;
+                document.getElementById('qr-display').style.display = 'block';
+                document.getElementById('btn-gerar-qr').textContent = '🔄 Gerar Novamente';
+            });
+        }
+        
+        function baixarQRCode() {
+            if (!qrCodeObj) return;
             
-            document.getElementById('url-funcionario').textContent = urlFunc;
-            document.getElementById('url-enfermeira').textContent = urlEnf;
-            document.getElementById('url-gestor').textContent = urlGest;
-            
-            if (typeof QRCode !== 'undefined') {
-                var qrDiv = document.getElementById('qr-funcionario');
-                qrDiv.innerHTML = '';
-                QRCode.toDataURL(urlFunc, { width: 200, margin: 2 }, function(err, url) {
-                    if (!err) {
-                        var img = document.createElement('img');
-                        img.src = url;
-                        img.alt = 'QR Code Funcionário';
-                        qrDiv.appendChild(img);
-                        
-                        var btn = document.createElement('button');
-                        btn.className = 'btn btn-sm btn-success';
-                        btn.textContent = 'Baixar QR Code';
-                        btn.onclick = function() {
-                            var a = document.createElement('a');
-                            a.href = url;
-                            a.download = 'qrcode-funcionario.png';
-                            a.click();
-                        };
-                        qrDiv.appendChild(btn);
-                    }
-                });
-            }
+            var link = document.createElement('a');
+            link.download = 'qrcode-funcionarios.png';
+            link.href = qrCodeObj.toDataURL();
+            link.click();
         }
         
         function copiarURL(tipo) {
-            var url = '';
-            if (tipo === 'enfermeira') url = BASE_URL + '?tipo=enfermeira';
-            else if (tipo === 'gestor') url = BASE_URL + '?tipo=gestor';
-            
-            navigator.clipboard.writeText(url).then(function() {
-                alert('✅ URL copiada!');
-            });
+            var url = tipo === 'enfermeira' ? BASE_URL + '?tipo=enfermeira' : BASE_URL + '?tipo=gestor';
+            navigator.clipboard.writeText(url).then(() => alert('✅ URL copiada!'));
         }
     </script>
 </body>
