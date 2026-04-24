@@ -641,7 +641,7 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script>
         var SHEET_ID = "1TVYsc9GnaK_T1YILkdgBOJSyDA4CZbEyvzk47Izr-go";
-        var API_KEY = "AIzaSyAkfZGHXP-X1e-Dqe1WMZDPxHGVWHAcPqE";
+        var API_KEY = "AIzaSyC2Vb-uj16w6NnlSk6sOAm6S1Uj5HpIh40";
         var BASE_URL = window.location.origin + window.location.pathname;
         
         var urlParams = new URLSearchParams(window.location.search);
