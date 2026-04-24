@@ -1,4 +1,4 @@
-[SISTEMA_FINAL_SHEETS_QR.html](https://github.com/user-attachments/files/27026408/SISTEMA_FINAL_SHEETS_QR.html)
+[SISTEMA_CORRIGIDO_FINAL.html](https://github.com/user-attachments/files/27054327/SISTEMA_CORRIGIDO_FINAL.html)
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -149,9 +149,9 @@
         
         .btn-sm {
             width: auto;
-            padding: 6px 10px;
+            padding: 6px 12px;
             font-size: 12px;
-            margin: 2px;
+            margin: 4px;
         }
         
         .badge {
@@ -165,29 +165,6 @@
         .badge-warn { background: #fef3c7; color: #92400e; }
         .badge-ok { background: #dcfce7; color: #166534; }
         .badge-danger { background: #fee2e2; color: #991b1b; }
-        
-        .toast {
-            display: none;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 12px;
-            font-size: 12px;
-            border-left: 4px solid;
-        }
-        
-        .toast.show { display: block; }
-        
-        .toast.success {
-            background: #f0fdf4;
-            border-left-color: var(--success);
-            color: #166534;
-        }
-        
-        .toast.error {
-            background: #fef2f2;
-            border-left-color: var(--danger);
-            color: #991b1b;
-        }
         
         .item {
             border: 1px solid var(--border);
@@ -246,6 +223,39 @@
         
         .alert-title { font-weight: 600; font-size: 13px; margin-bottom: 6px; }
         .alert-text { font-size: 12px; color: #78350f; }
+        
+        .success-message {
+            background: #dcfce7;
+            border: 2px solid #16a34a;
+            border-radius: 8px;
+            padding: 24px;
+            text-align: center;
+        }
+        
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #16a34a;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 48px;
+        }
+        
+        .success-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #166534;
+            margin-bottom: 8px;
+        }
+        
+        .success-text {
+            font-size: 14px;
+            color: #166534;
+        }
         
         .metrics {
             display: grid;
@@ -381,8 +391,8 @@
         }
         
         .qr-section {
-            background: var(--light);
-            border: 2px dashed var(--border);
+            background: white;
+            border: 2px solid var(--primary);
             border-radius: 8px;
             padding: 20px;
             text-align: center;
@@ -396,40 +406,47 @@
         }
         
         .qr-code-display {
-            background: white;
+            background: var(--light);
             padding: 20px;
             border-radius: 8px;
             margin: 16px auto;
             max-width: 250px;
         }
         
-        .qr-code-display img {
-            width: 200px;
-            height: 200px;
+        .qr-code-display canvas {
             display: block;
             margin: 0 auto;
         }
         
-        .debug-box {
-            background: #f9fafb;
+        .url-display {
+            background: var(--light);
             border: 1px solid var(--border);
             border-radius: 6px;
             padding: 12px;
             font-size: 11px;
-            font-family: monospace;
+            word-break: break-all;
             margin-top: 12px;
-            max-height: 200px;
-            overflow-y: auto;
+            font-family: monospace;
         }
         
-        .error-box {
-            background: #fee2e2;
-            border: 1px solid #dc2626;
-            border-radius: 6px;
-            padding: 12px;
-            color: #991b1b;
-            font-size: 12px;
-            margin-top: 12px;
+        .link-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        
+        .link-card h4 {
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
+        
+        .link-card p {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 8px;
         }
     </style>
 </head>
@@ -471,7 +488,6 @@
                 </div>
                 
                 <div id="ci-form" style="display:none;">
-                    <div id="toast-ci" class="toast"></div>
                     <div class="field">
                         <label>Funcionário</label>
                         <select id="ci-func"></select>
@@ -489,6 +505,14 @@
                         <select id="ci-autor"></select>
                     </div>
                     <button class="btn btn-primary" onclick="fazerCheckin()">Confirmar chegada</button>
+                </div>
+                
+                <div id="ci-sucesso" style="display:none;">
+                    <div class="success-message">
+                        <div class="success-icon">✓</div>
+                        <div class="success-title">Obrigado!</div>
+                        <div class="success-text">Bom plantão! 🏥</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -543,7 +567,7 @@
                 <div class="cal-days" id="cal-grid"></div>
                 
                 <div id="cal-detalhes" style="display:none;">
-                    <div class="card" style="margin-bottom:0;">
+                    <div style="background:var(--light);border-radius:8px;padding:12px;margin-top:12px;">
                         <h3 style="font-size:14px;margin-bottom:10px;" id="det-data"></h3>
                         <div id="det-items"></div>
                     </div>
@@ -585,25 +609,25 @@
         <!-- CADASTROS -->
         <div class="screen" id="screen-cadastros">
             <div class="card">
-                <h2>⚙️ Cadastros</h2>
+                <h2>⚙️ Cadastros do Google Sheets</h2>
                 
-                <button class="btn btn-warning" onclick="carregarDados()" style="margin-bottom:12px;">🔄 Recarregar dados do Google Sheets</button>
+                <button class="btn btn-warning" onclick="carregarDados()" style="margin-bottom:12px;">🔄 Recarregar dados</button>
                 
                 <div id="cad-status"></div>
                 <div id="cad-content"></div>
             </div>
             
-            <!-- QR CODE GENERATOR -->
+            <!-- QR CODE E LINKS -->
             <div id="qr-generator-section" style="display:none;">
                 <div class="qr-section">
                     <h3>📱 QR Code para Funcionários</h3>
-                    <p style="font-size:12px;color:#666;margin-bottom:12px;">Imprima e fixe na sala de enfermagem</p>
+                    <p style="font-size:12px;color:#666;margin-bottom:16px;">Gere o QR Code para os funcionários registrarem plantões</p>
                     
-                    <button class="btn btn-primary" onclick="gerarQRCode()" id="btn-gerar-qr">
+                    <button class="btn btn-primary btn-lg" onclick="gerarQRCode()" style="font-size:16px;padding:14px;">
                         🎨 GERAR QR CODE
                     </button>
                     
-                    <div id="qr-display" style="display:none;">
+                    <div id="qr-display" style="display:none;margin-top:20px;">
                         <div class="qr-code-display">
                             <div id="qrcode"></div>
                         </div>
@@ -612,27 +636,22 @@
                             ⬇️ Baixar QR Code (PNG)
                         </button>
                         
-                        <div style="margin-top:16px;font-size:11px;color:#666;">
-                            <strong>URL do QR Code:</strong><br>
-                            <div style="background:white;padding:8px;border-radius:4px;margin-top:6px;word-break:break-all;" id="qr-url"></div>
-                        </div>
+                        <div class="url-display" id="qr-url"></div>
                     </div>
                 </div>
                 
-                <div class="card">
-                    <h3 style="font-size:14px;margin-bottom:12px;">🔗 URLs de Acesso</h3>
-                    
-                    <div style="margin-bottom:16px;">
-                        <strong style="font-size:12px;">Enfermeira:</strong>
-                        <div style="background:var(--light);padding:8px;border-radius:4px;font-size:11px;margin-top:4px;word-break:break-all;" id="url-enf"></div>
-                        <button class="btn btn-sm btn-primary" onclick="copiarURL('enfermeira')" style="margin-top:6px;">Copiar</button>
-                    </div>
-                    
-                    <div>
-                        <strong style="font-size:12px;">Gestor:</strong>
-                        <div style="background:var(--light);padding:8px;border-radius:4px;font-size:11px;margin-top:4px;word-break:break-all;" id="url-gest"></div>
-                        <button class="btn btn-sm btn-primary" onclick="copiarURL('gestor')" style="margin-top:6px;">Copiar</button>
-                    </div>
+                <div class="link-card">
+                    <h4>💉 Link para Enfermeira</h4>
+                    <p>Compartilhe este link com a enfermeira responsável pela aprovação:</p>
+                    <div class="url-display" id="url-enf"></div>
+                    <button class="btn btn-sm btn-primary" onclick="copiarURL('enfermeira')">📋 Copiar Link</button>
+                </div>
+                
+                <div class="link-card">
+                    <h4>👨‍💼 Link para Gestor</h4>
+                    <p>Seu link de acesso administrativo completo:</p>
+                    <div class="url-display" id="url-gest"></div>
+                    <button class="btn btn-sm btn-primary" onclick="copiarURL('gestor')">📋 Copiar Link</button>
                 </div>
             </div>
         </div>
@@ -641,7 +660,7 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script>
         var SHEET_ID = "1TVYsc9GnaK_T1YILkdgBOJSyDA4CZbEyvzk47Izr-go";
-        var API_KEY = "AIzaSyC2Vb-uj16w6NnlSk6sOAm6S1Uj5HpIh40";
+        var API_KEY = "AIzaSyC2Vb-uj16w6NnlSk6sOAm6S1Uj5HpIh40"
         var BASE_URL = window.location.origin + window.location.pathname;
         
         var urlParams = new URLSearchParams(window.location.search);
@@ -659,27 +678,18 @@
         var hoje = new Date();
         var calMes = hoje.getMonth();
         var calAno = hoje.getFullYear();
-        var qrCodeObj = null;
+        var qrCodeCanvas = null;
         
         async function carregarDados() {
             var statusEl = document.getElementById('cad-status');
             statusEl.innerHTML = '<div class="loading">🔄 Carregando dados do Google Sheets...</div>';
             
             try {
-                console.log('🔍 Tentando carregar dados...');
-                
-                // Funcionários
                 var urlFunc = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Funcionários?key=${API_KEY}`;
-                console.log('📡 URL Funcionários:', urlFunc);
-                
                 var respFunc = await fetch(urlFunc);
                 var dataFunc = await respFunc.json();
                 
-                console.log('📦 Resposta Funcionários:', dataFunc);
-                
-                if (dataFunc.error) {
-                    throw new Error('Erro ao carregar Funcionários: ' + dataFunc.error.message);
-                }
+                if (dataFunc.error) throw new Error(dataFunc.error.message);
                 
                 db.funcionarios = [];
                 if (dataFunc.values && dataFunc.values.length > 1) {
@@ -693,14 +703,9 @@
                     }
                 }
                 
-                console.log('✅ Funcionários carregados:', db.funcionarios);
-                
-                // Configurações (Tipos de Plantão)
                 var urlConf = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Configurações?key=${API_KEY}`;
                 var respConf = await fetch(urlConf);
                 var dataConf = await respConf.json();
-                
-                console.log('📦 Resposta Configurações:', dataConf);
                 
                 db.tipos = [];
                 if (dataConf.values && dataConf.values.length > 1) {
@@ -714,9 +719,6 @@
                     }
                 }
                 
-                console.log('✅ Tipos carregados:', db.tipos);
-                
-                // Autorizadores
                 var urlAut = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Autorizadores?key=${API_KEY}`;
                 var respAut = await fetch(urlAut);
                 var dataAut = await respAut.json();
@@ -733,7 +735,6 @@
                     }
                 }
                 
-                // Aprovadores
                 var urlApr = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Aprovadores?key=${API_KEY}`;
                 var respApr = await fetch(urlApr);
                 var dataApr = await respApr.json();
@@ -750,7 +751,6 @@
                     }
                 }
                 
-                // Motivos da coluna E da aba Plantões
                 var urlPlant = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Plantões?key=${API_KEY}`;
                 var respPlant = await fetch(urlPlant);
                 var dataPlant = await respPlant.json();
@@ -771,18 +771,14 @@
                     db.motivos = ['Agitação noturna', 'Intercorrência médica', 'Reforço de equipe'];
                 }
                 
-                console.log('✅ TODOS OS DADOS CARREGADOS:', db);
-                
                 statusEl.innerHTML = '<div style="background:#dcfce7;color:#166534;padding:10px;border-radius:6px;font-size:12px;">✅ Dados carregados com sucesso!</div>';
                 
                 populateSelects();
                 renderCad();
                 
             } catch (error) {
-                console.error('❌ ERRO:', error);
-                statusEl.innerHTML = '<div class="error-box"><strong>❌ Erro ao carregar dados:</strong><br>' + error.message + '<br><br><small>Verifique se a planilha está pública e as abas têm os nomes corretos.</small></div>';
+                statusEl.innerHTML = '<div style="background:#fee2e2;color:#991b1b;padding:10px;border-radius:6px;font-size:12px;">❌ Erro: ' + error.message + '</div>';
                 
-                // Usar dados padrão
                 db.funcionarios = [{nome: "Maria Silva", cargo: "Cuidadora"}];
                 db.tipos = [{nome: "Dia (12h)", valor: 180}];
                 db.autorizadores = [{nome: "Dr. Roberto", funcao: "Médico"}];
@@ -797,6 +793,7 @@
         window.addEventListener('DOMContentLoaded', function() {
             configurarAcesso();
             carregarDados();
+            renderCal();
             if (tipoAcesso === 'gestor') {
                 document.getElementById('qr-generator-section').style.display = 'block';
                 mostrarURLs();
@@ -811,7 +808,6 @@
             if (tipoAcesso === 'funcionario') {
                 banner.textContent = '👤 Acesso Funcionário — Check-in de Plantão';
                 nav.classList.add('hidden');
-                buttons.forEach(b => b.disabled = true);
             } else if (tipoAcesso === 'enfermeira') {
                 banner.textContent = '💉 Acesso Enfermeira — Aprovação de Plantões';
                 buttons[0].disabled = true;
@@ -822,7 +818,6 @@
                 show('enfermeira');
             } else {
                 banner.textContent = '👨‍💼 Acesso Gestor — Controle Total';
-                buttons.forEach(b => b.disabled = false);
             }
         }
         
@@ -848,6 +843,7 @@
             document.getElementById('ci-gate').style.display = 'block';
             document.getElementById('ci-aviso').style.display = 'none';
             document.getElementById('ci-form').style.display = 'none';
+            document.getElementById('ci-sucesso').style.display = 'none';
         }
         
         function ciGate(sim) {
@@ -857,13 +853,6 @@
             } else {
                 document.getElementById('ci-aviso').style.display = 'block';
             }
-        }
-        
-        function toast(msg, type = 'success') {
-            var el = document.getElementById('toast-ci');
-            el.textContent = msg;
-            el.className = 'toast show ' + type;
-            setTimeout(() => el.className = 'toast', 3000);
         }
         
         function populateSelects() {
@@ -918,7 +907,7 @@
             var tipo = document.getElementById('ci-tipo').value;
             
             if (!func || !tipo) {
-                toast('Preencha funcionário e tipo!', 'error');
+                alert('Por favor, preencha funcionário e tipo de plantão!');
                 return;
             }
             
@@ -939,12 +928,8 @@
             db.plantoes.unshift(p);
             localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
             
-            document.getElementById('ci-func').value = '';
-            document.getElementById('ci-tipo').value = '';
-            document.getElementById('ci-motivo').value = '';
-            document.getElementById('ci-autor').value = '';
-            toast('✅ Check-in registrado!');
-            resetGate();
+            document.getElementById('ci-form').style.display = 'none';
+            document.getElementById('ci-sucesso').style.display = 'block';
         }
         
         function renderEnf() {
@@ -984,6 +969,7 @@
             );
             localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
             renderEnf();
+            renderCal();
         }
         
         function rejeitar(id) {
@@ -992,6 +978,7 @@
             );
             localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
             renderEnf();
+            renderCal();
         }
         
         function renderCal() {
@@ -1021,7 +1008,7 @@
                 else if (plantoesDia.some(p => p.status === 'aprovado')) statusClass = 'approved';
                 else if (plantoesDia.some(p => p.status === 'pendente')) statusClass = 'pending';
                 
-                html += '<div class="cal-day ' + statusClass + '">' + d;
+                html += '<div class="cal-day ' + statusClass + '" onclick="selecionarDia(' + d + ')">' + d;
                 if (plantoesDia.length > 0) html += '<div class="dot"></div>';
                 html += '</div>';
             }
@@ -1043,6 +1030,33 @@
             calMes++;
             if (calMes > 11) { calMes = 0; calAno++; }
             renderCal();
+        }
+        
+        function selecionarDia(d) {
+            var plantoesDia = db.plantoes.filter(p => 
+                p.dataObj && p.dataObj.getFullYear() === calAno && 
+                p.dataObj.getMonth() === calMes && 
+                p.dataObj.getDate() === d
+            );
+            
+            var det = document.getElementById('cal-detalhes');
+            if (!plantoesDia.length) {
+                det.style.display = 'none';
+                return;
+            }
+            
+            det.style.display = 'block';
+            var meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+            document.getElementById('det-data').textContent = d + ' de ' + meses[calMes] + ' · ' + plantoesDia.length + ' plantão(ões)';
+            document.getElementById('det-items').innerHTML = plantoesDia.map(p => `
+                <div class="item">
+                    <div class="item-head">
+                        <span class="item-name">${p.func}</span>
+                        <span class="badge badge-${p.status === 'pendente' ? 'warn' : p.status === 'aprovado' ? 'ok' : 'danger'}">${p.status}</span>
+                    </div>
+                    <div class="item-sub">${p.tipo} · ${p.hora} · R$${p.valor}</div>
+                </div>
+            `).join('');
         }
         
         function initDates() {
@@ -1070,7 +1084,7 @@
             var filtrados = db.plantoes.filter(p => p.status === 'aprovado' || p.status === 'pago');
             
             if (!filtrados.length) {
-                el.innerHTML = '<div class="card"><p style="font-size:12px;color:#666;">Nenhum plantão.</p></div>';
+                el.innerHTML = '<div class="card"><p style="font-size:12px;color:#666;">Nenhum plantão aprovado.</p></div>';
                 return;
             }
             
@@ -1084,13 +1098,11 @@
         }
         
         function renderCad() {
-            var html = '<div class="debug-box">';
-            html += '<strong>Funcionários carregados (' + db.funcionarios.length + '):</strong><br>';
-            db.funcionarios.forEach(f => html += '- ' + f.nome + ' (' + f.cargo + ')<br>');
-            html += '<br><strong>Tipos de plantão (' + db.tipos.length + '):</strong><br>';
+            var html = '<div style="background:#f9fafb;border:1px solid var(--border);border-radius:6px;padding:12px;font-size:11px;font-family:monospace;max-height:200px;overflow-y:auto;">';
+            html += '<strong>Funcionários (' + db.funcionarios.length + '):</strong><br>';
+            db.funcionarios.forEach(f => html += '- ' + f.nome + '<br>');
+            html += '<br><strong>Tipos (' + db.tipos.length + '):</strong><br>';
             db.tipos.forEach(t => html += '- ' + t.nome + ' (R$' + t.valor + ')<br>');
-            html += '<br><strong>Motivos (' + db.motivos.length + '):</strong><br>';
-            db.motivos.forEach(m => html += '- ' + m + '<br>');
             html += '</div>';
             
             document.getElementById('cad-content').innerHTML = html;
@@ -1099,39 +1111,45 @@
         function mostrarURLs() {
             document.getElementById('url-enf').textContent = BASE_URL + '?tipo=enfermeira';
             document.getElementById('url-gest').textContent = BASE_URL + '?tipo=gestor';
-            document.getElementById('qr-url').textContent = BASE_URL + '?tipo=funcionario';
         }
         
         function gerarQRCode() {
+            if (!window.QRCode) {
+                alert('Aguarde o carregamento da biblioteca QR Code...');
+                return;
+            }
+            
             var url = BASE_URL + '?tipo=funcionario';
             var qrDiv = document.getElementById('qrcode');
             qrDiv.innerHTML = '';
             
             QRCode.toCanvas(url, { width: 200, margin: 2 }, function(error, canvas) {
                 if (error) {
-                    console.error(error);
-                    alert('Erro ao gerar QR Code');
+                    alert('Erro ao gerar QR Code: ' + error);
                     return;
                 }
                 qrDiv.appendChild(canvas);
-                qrCodeObj = canvas;
+                qrCodeCanvas = canvas;
                 document.getElementById('qr-display').style.display = 'block';
-                document.getElementById('btn-gerar-qr').textContent = '🔄 Gerar Novamente';
+                document.getElementById('qr-url').textContent = url;
             });
         }
         
         function baixarQRCode() {
-            if (!qrCodeObj) return;
+            if (!qrCodeCanvas) {
+                alert('Gere o QR Code primeiro!');
+                return;
+            }
             
             var link = document.createElement('a');
             link.download = 'qrcode-funcionarios.png';
-            link.href = qrCodeObj.toDataURL();
+            link.href = qrCodeCanvas.toDataURL();
             link.click();
         }
         
         function copiarURL(tipo) {
             var url = tipo === 'enfermeira' ? BASE_URL + '?tipo=enfermeira' : BASE_URL + '?tipo=gestor';
-            navigator.clipboard.writeText(url).then(() => alert('✅ URL copiada!'));
+            navigator.clipboard.writeText(url).then(() => alert('✅ Link copiado!'));
         }
     </script>
 </body>
