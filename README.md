@@ -1,4 +1,4 @@
-[SISTEMA_CORRIGIDO_FINAL.html](https://github.com/user-attachments/files/27054327/SISTEMA_CORRIGIDO_FINAL.html)
+[SISTEMA_CORRIGIDO_FINAL.html](https://github.com/user-attachments/files/27167661/SISTEMA_CORRIGIDO_FINAL.html)
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -660,7 +660,7 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script>
         var SHEET_ID = "1TVYsc9GnaK_T1YILkdgBOJSyDA4CZbEyvzk47Izr-go";
-        var API_KEY = "AIzaSyC2Vb-uj16w6NnlSk6sOAm6S1Uj5HpIh40"
+        var API_KEY = AIzaSyC2Vb-uj16w6NnlSk6sOAm6S1Uj5HpIh40
         var BASE_URL = window.location.origin + window.location.pathname;
         
         var urlParams = new URLSearchParams(window.location.search);
@@ -1088,13 +1088,56 @@
                 return;
             }
             
-            var html = '<div class="card"><table class="payment-table"><thead><tr><th>Data</th><th>Func</th><th>Tipo</th><th>Valor</th></tr></thead><tbody>';
+            var html = '<div class="card">';
+            html += '<table class="payment-table">';
+            html += '<thead><tr><th>Data</th><th>Funcionário</th><th>Tipo</th><th>Valor</th><th style="text-align:center;">Pago?</th></tr></thead>';
+            html += '<tbody>';
+            
             filtrados.forEach(p => {
-                html += '<tr><td>' + p.data + '</td><td>' + p.func + '</td><td>' + p.tipo + '</td><td>R$' + p.valor + '</td></tr>';
+                var isPago = p.status === 'pago';
+                var checkboxHtml = isPago 
+                    ? '<input type="checkbox" checked disabled style="cursor:not-allowed;">' 
+                    : '<input type="checkbox" onchange="marcarPago(' + p.id + ', this.checked)">';
+                
+                var rowStyle = isPago ? 'opacity:0.6;' : '';
+                
+                html += '<tr style="' + rowStyle + '">';
+                html += '<td>' + p.data + '</td>';
+                html += '<td>' + p.func + '</td>';
+                html += '<td>' + p.tipo + '</td>';
+                html += '<td><strong>R$' + p.valor + '</strong></td>';
+                html += '<td style="text-align:center;">' + checkboxHtml + '</td>';
+                html += '</tr>';
             });
-            html += '</tbody></table></div>';
+            
+            html += '</tbody></table>';
+            
+            var totalGeral = filtrados.reduce((s, p) => s + p.valor, 0);
+            var totalPago = filtrados.filter(p => p.status === 'pago').reduce((s, p) => s + p.valor, 0);
+            var totalAPagar = totalGeral - totalPago;
+            
+            html += '<div style="margin-top:16px;padding-top:16px;border-top:2px solid var(--border);">';
+            html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:13px;">';
+            html += '<div><span style="color:#666;">Total Geral:</span><br><strong style="font-size:16px;">R$' + totalGeral + '</strong></div>';
+            html += '<div><span style="color:#666;">Total Pago:</span><br><strong style="font-size:16px;color:var(--success);">R$' + totalPago + '</strong></div>';
+            html += '<div><span style="color:#666;">A Pagar:</span><br><strong style="font-size:16px;color:var(--warning);">R$' + totalAPagar + '</strong></div>';
+            html += '</div></div>';
+            
+            html += '</div>';
             
             el.innerHTML = html;
+        }
+        
+        function marcarPago(id, checked) {
+            db.plantoes = db.plantoes.map(p => {
+                if (p.id === id) {
+                    return {...p, status: checked ? 'pago' : 'aprovado'};
+                }
+                return p;
+            });
+            localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
+            renderTab();
+            renderCal();
         }
         
         function renderCad() {
@@ -1114,25 +1157,32 @@
         }
         
         function gerarQRCode() {
-            if (!window.QRCode) {
-                alert('Aguarde o carregamento da biblioteca QR Code...');
-                return;
-            }
-            
             var url = BASE_URL + '?tipo=funcionario';
             var qrDiv = document.getElementById('qrcode');
             qrDiv.innerHTML = '';
             
-            QRCode.toCanvas(url, { width: 200, margin: 2 }, function(error, canvas) {
-                if (error) {
-                    alert('Erro ao gerar QR Code: ' + error);
-                    return;
+            try {
+                // Criar elemento canvas
+                var canvas = document.createElement('canvas');
+                
+                // Usar a biblioteca QRCode
+                if (typeof QRCode !== 'undefined' && QRCode.toCanvas) {
+                    QRCode.toCanvas(canvas, url, { width: 200, margin: 2 }, function(error) {
+                        if (error) {
+                            alert('Erro ao gerar QR Code: ' + error);
+                            return;
+                        }
+                        qrDiv.appendChild(canvas);
+                        qrCodeCanvas = canvas;
+                        document.getElementById('qr-display').style.display = 'block';
+                        document.getElementById('qr-url').textContent = url;
+                    });
+                } else {
+                    alert('Biblioteca QR Code ainda não carregou. Aguarde alguns segundos e tente novamente.');
                 }
-                qrDiv.appendChild(canvas);
-                qrCodeCanvas = canvas;
-                document.getElementById('qr-display').style.display = 'block';
-                document.getElementById('qr-url').textContent = url;
-            });
+            } catch (e) {
+                alert('Erro ao gerar QR Code: ' + e.message);
+            }
         }
         
         function baixarQRCode() {
