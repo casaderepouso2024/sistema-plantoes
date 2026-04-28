@@ -1,4 +1,4 @@
-[SISTEMA_CORRIGIDO_FINAL.html](https://github.com/user-attachments/files/27167661/SISTEMA_CORRIGIDO_FINAL.html)
+[SISTEMA_FINAL_COMPLETO.html](https://github.com/user-attachments/files/27168913/SISTEMA_FINAL_COMPLETO.html)
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -147,6 +147,9 @@
         .btn-warning { background: var(--warning); color: white; }
         .btn-warning:hover { opacity: 0.9; }
         
+        .btn-info { background: var(--info); color: white; }
+        .btn-info:hover { opacity: 0.9; }
+        
         .btn-sm {
             width: auto;
             padding: 6px 12px;
@@ -165,6 +168,7 @@
         .badge-warn { background: #fef3c7; color: #92400e; }
         .badge-ok { background: #dcfce7; color: #166534; }
         .badge-danger { background: #fee2e2; color: #991b1b; }
+        .badge-paid { background: #dcfce7; color: #166534; border: 2px solid #16a34a; }
         
         .item {
             border: 1px solid var(--border);
@@ -382,6 +386,11 @@
         }
         
         .payment-table tr:hover { background: #fafafa; }
+        
+        .payment-table tr.pago {
+            background: #f0fdf4;
+            opacity: 0.7;
+        }
 
         .loading {
             text-align: center;
@@ -413,9 +422,11 @@
             max-width: 250px;
         }
         
-        .qr-code-display canvas {
+        .qr-code-display img {
             display: block;
             margin: 0 auto;
+            width: 200px;
+            height: 200px;
         }
         
         .url-display {
@@ -431,7 +442,7 @@
         
         .link-card {
             background: white;
-            border: 1px solid var(--border);
+            border: 2px solid var(--border);
             border-radius: 8px;
             padding: 16px;
             margin-bottom: 12px;
@@ -441,12 +452,23 @@
             font-size: 14px;
             margin-bottom: 8px;
             color: var(--primary);
+            font-weight: 600;
         }
         
         .link-card p {
             font-size: 11px;
             color: #666;
             margin-bottom: 8px;
+        }
+        
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        input[type="checkbox"]:disabled {
+            cursor: not-allowed;
         }
     </style>
 </head>
@@ -464,6 +486,7 @@
             <button onclick="show('enfermeira')">Enfermeira</button>
             <button onclick="show('calendario')">Calendário</button>
             <button onclick="show('pagamentos')">Pagamentos</button>
+            <button onclick="show('historico')">Histórico</button>
             <button onclick="show('cadastros')">Cadastros</button>
         </div>
         
@@ -606,6 +629,20 @@
             <div id="tab-lista"></div>
         </div>
         
+        <!-- HISTÓRICO -->
+        <div class="screen" id="screen-historico">
+            <div class="card">
+                <h2>📋 Histórico Completo de Plantões</h2>
+                <p style="font-size:12px;color:#666;margin-bottom:12px;">Todos os plantões registrados no sistema</p>
+                
+                <button class="btn btn-success" onclick="exportarXLS()" style="margin-bottom:12px;">
+                    📥 EXPORTAR PARA EXCEL (XLS)
+                </button>
+                
+                <div id="historico-lista"></div>
+            </div>
+        </div>
+        
         <!-- CADASTROS -->
         <div class="screen" id="screen-cadastros">
             <div class="card">
@@ -617,19 +654,48 @@
                 <div id="cad-content"></div>
             </div>
             
-            <!-- QR CODE E LINKS -->
+            <!-- LINKS DE ACESSO -->
+            <div id="links-section" style="display:none;">
+                <div class="card" style="background:#e0f2fe;border:2px solid var(--info);">
+                    <h2 style="color:var(--info);">🔗 Links de Acesso ao Sistema</h2>
+                    <p style="font-size:12px;color:#0c4a6e;margin-bottom:16px;">Copie e compartilhe os links conforme o perfil de acesso</p>
+                </div>
+                
+                <div class="link-card" style="border-color:var(--success);">
+                    <h4 style="color:var(--success);">👤 LINK FUNCIONÁRIO</h4>
+                    <p>Acesso apenas para registrar plantões (check-in)</p>
+                    <div class="url-display" id="url-func"></div>
+                    <button class="btn btn-sm btn-success" onclick="copiarURL('funcionario')">📋 Copiar Link Funcionário</button>
+                </div>
+                
+                <div class="link-card" style="border-color:var(--warning);">
+                    <h4 style="color:var(--warning);">💉 LINK ENFERMEIRA</h4>
+                    <p>Acesso apenas para aprovar plantões</p>
+                    <div class="url-display" id="url-enf"></div>
+                    <button class="btn btn-sm btn-warning" onclick="copiarURL('enfermeira')">📋 Copiar Link Enfermeira</button>
+                </div>
+                
+                <div class="link-card" style="border-color:var(--primary);">
+                    <h4 style="color:var(--primary);">👨‍💼 LINK GESTOR</h4>
+                    <p>Acesso completo a todas as funcionalidades</p>
+                    <div class="url-display" id="url-gest"></div>
+                    <button class="btn btn-sm btn-primary" onclick="copiarURL('gestor')">📋 Copiar Link Gestor</button>
+                </div>
+            </div>
+            
+            <!-- QR CODE -->
             <div id="qr-generator-section" style="display:none;">
                 <div class="qr-section">
                     <h3>📱 QR Code para Funcionários</h3>
                     <p style="font-size:12px;color:#666;margin-bottom:16px;">Gere o QR Code para os funcionários registrarem plantões</p>
                     
-                    <button class="btn btn-primary btn-lg" onclick="gerarQRCode()" style="font-size:16px;padding:14px;">
+                    <button class="btn btn-primary" onclick="gerarQRCode()" style="font-size:16px;padding:14px;">
                         🎨 GERAR QR CODE
                     </button>
                     
                     <div id="qr-display" style="display:none;margin-top:20px;">
                         <div class="qr-code-display">
-                            <div id="qrcode"></div>
+                            <img id="qr-image" alt="QR Code" />
                         </div>
                         
                         <button class="btn btn-success" onclick="baixarQRCode()">
@@ -639,28 +705,14 @@
                         <div class="url-display" id="qr-url"></div>
                     </div>
                 </div>
-                
-                <div class="link-card">
-                    <h4>💉 Link para Enfermeira</h4>
-                    <p>Compartilhe este link com a enfermeira responsável pela aprovação:</p>
-                    <div class="url-display" id="url-enf"></div>
-                    <button class="btn btn-sm btn-primary" onclick="copiarURL('enfermeira')">📋 Copiar Link</button>
-                </div>
-                
-                <div class="link-card">
-                    <h4>👨‍💼 Link para Gestor</h4>
-                    <p>Seu link de acesso administrativo completo:</p>
-                    <div class="url-display" id="url-gest"></div>
-                    <button class="btn btn-sm btn-primary" onclick="copiarURL('gestor')">📋 Copiar Link</button>
-                </div>
             </div>
         </div>
     </div>
     
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
         var SHEET_ID = "1TVYsc9GnaK_T1YILkdgBOJSyDA4CZbEyvzk47Izr-go";
-        var API_KEY = AIzaSyC2Vb-uj16w6NnlSk6sOAm6S1Uj5HpIh40
+        var API_KEY = "AIzaSyC2Vb-uj16w6NnlSk6sOAm6S1Uj5HpIh40";
         var BASE_URL = window.location.origin + window.location.pathname;
         
         var urlParams = new URLSearchParams(window.location.search);
@@ -678,7 +730,6 @@
         var hoje = new Date();
         var calMes = hoje.getMonth();
         var calAno = hoje.getFullYear();
-        var qrCodeCanvas = null;
         
         async function carregarDados() {
             var statusEl = document.getElementById('cad-status');
@@ -796,6 +847,7 @@
             renderCal();
             if (tipoAcesso === 'gestor') {
                 document.getElementById('qr-generator-section').style.display = 'block';
+                document.getElementById('links-section').style.display = 'block';
                 mostrarURLs();
             }
         });
@@ -815,6 +867,7 @@
                 buttons[2].disabled = true;
                 buttons[3].disabled = true;
                 buttons[4].disabled = true;
+                buttons[5].disabled = true;
                 show('enfermeira');
             } else {
                 banner.textContent = '👨‍💼 Acesso Gestor — Controle Total';
@@ -829,7 +882,7 @@
             document.querySelector('#screen-' + s).classList.add('active');
             document.querySelectorAll('.nav button').forEach(el => el.classList.remove('active'));
             
-            var tabs = ['checkin', 'enfermeira', 'calendario', 'pagamentos', 'cadastros'];
+            var tabs = ['checkin', 'enfermeira', 'calendario', 'pagamentos', 'historico', 'cadastros'];
             var idx = tabs.indexOf(s);
             if (idx >= 0) document.querySelectorAll('.nav button')[idx].classList.add('active');
             
@@ -837,6 +890,7 @@
             if (s === 'enfermeira') renderEnf();
             if (s === 'calendario') renderCal();
             if (s === 'pagamentos') { initDates(); renderTab(); }
+            if (s === 'historico') renderHistorico();
         }
         
         function resetGate() {
@@ -916,13 +970,13 @@
                 id: Date.now(),
                 func: func,
                 tipo: tipo,
-                motivo: document.getElementById('ci-motivo').value || null,
+                motivo: document.getElementById('ci-motivo').value || '',
                 data: hoje.toLocaleDateString('pt-BR'),
                 dataObj: new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()),
                 hora: hoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
                 valor: t ? t.valor : 0,
                 status: 'pendente',
-                autor: document.getElementById('ci-autor').value || null
+                autor: document.getElementById('ci-autor').value || ''
             };
             
             db.plantoes.unshift(p);
@@ -955,6 +1009,7 @@
                         <span class="badge badge-warn">Pendente</span>
                     </div>
                     <div class="item-sub">${p.tipo} · ${p.data} · R$${p.valor}</div>
+                    ${p.motivo ? '<div class="item-sub">Motivo: ' + p.motivo + '</div>' : ''}
                     <div style="display:flex;gap:8px;margin-top:8px;">
                         <button class="btn btn-success btn-sm" style="flex:1;" onclick="aprovar(${p.id})">Aprovar</button>
                         <button class="btn btn-danger btn-sm" style="flex:1;" onclick="rejeitar(${p.id})">Rejeitar</button>
@@ -1052,7 +1107,7 @@
                 <div class="item">
                     <div class="item-head">
                         <span class="item-name">${p.func}</span>
-                        <span class="badge badge-${p.status === 'pendente' ? 'warn' : p.status === 'aprovado' ? 'ok' : 'danger'}">${p.status}</span>
+                        <span class="badge badge-${p.status === 'pendente' ? 'warn' : p.status === 'aprovado' ? 'ok' : p.status === 'pago' ? 'paid' : 'danger'}">${p.status}</span>
                     </div>
                     <div class="item-sub">${p.tipo} · ${p.hora} · R$${p.valor}</div>
                 </div>
@@ -1090,24 +1145,27 @@
             
             var html = '<div class="card">';
             html += '<table class="payment-table">';
-            html += '<thead><tr><th>Data</th><th>Funcionário</th><th>Tipo</th><th>Valor</th><th style="text-align:center;">Pago?</th></tr></thead>';
+            html += '<thead><tr><th>Data</th><th>Funcionário</th><th>Tipo</th><th>Valor</th><th style="text-align:center;width:80px;">✅ Pago?</th></tr></thead>';
             html += '<tbody>';
             
             filtrados.forEach(p => {
                 var isPago = p.status === 'pago';
-                var checkboxHtml = isPago 
-                    ? '<input type="checkbox" checked disabled style="cursor:not-allowed;">' 
-                    : '<input type="checkbox" onchange="marcarPago(' + p.id + ', this.checked)">';
+                var rowClass = isPago ? 'pago' : '';
                 
-                var rowStyle = isPago ? 'opacity:0.6;' : '';
-                
-                html += '<tr style="' + rowStyle + '">';
+                html += '<tr class="' + rowClass + '">';
                 html += '<td>' + p.data + '</td>';
                 html += '<td>' + p.func + '</td>';
-                html += '<td>' + p.tipo + '</td>';
+                html += '<td style="font-size:11px;">' + p.tipo + '</td>';
                 html += '<td><strong>R$' + p.valor + '</strong></td>';
-                html += '<td style="text-align:center;">' + checkboxHtml + '</td>';
-                html += '</tr>';
+                html += '<td style="text-align:center;">';
+                
+                if (isPago) {
+                    html += '<input type="checkbox" checked disabled style="cursor:not-allowed;">';
+                } else {
+                    html += '<input type="checkbox" onchange="marcarPago(' + p.id + ', this.checked)">';
+                }
+                
+                html += '</td></tr>';
             });
             
             html += '</tbody></table>';
@@ -1118,11 +1176,10 @@
             
             html += '<div style="margin-top:16px;padding-top:16px;border-top:2px solid var(--border);">';
             html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:13px;">';
-            html += '<div><span style="color:#666;">Total Geral:</span><br><strong style="font-size:16px;">R$' + totalGeral + '</strong></div>';
-            html += '<div><span style="color:#666;">Total Pago:</span><br><strong style="font-size:16px;color:var(--success);">R$' + totalPago + '</strong></div>';
-            html += '<div><span style="color:#666;">A Pagar:</span><br><strong style="font-size:16px;color:var(--warning);">R$' + totalAPagar + '</strong></div>';
+            html += '<div><span style="color:#666;">Total Geral:</span><br><strong style="font-size:18px;">R$' + totalGeral.toFixed(2) + '</strong></div>';
+            html += '<div><span style="color:#666;">Total Pago:</span><br><strong style="font-size:18px;color:var(--success);">R$' + totalPago.toFixed(2) + '</strong></div>';
+            html += '<div><span style="color:#666;">A Pagar:</span><br><strong style="font-size:18px;color:var(--warning);">R$' + totalAPagar.toFixed(2) + '</strong></div>';
             html += '</div></div>';
-            
             html += '</div>';
             
             el.innerHTML = html;
@@ -1138,68 +1195,139 @@
             localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
             renderTab();
             renderCal();
+            renderHistorico();
+        }
+        
+        function renderHistorico() {
+            var el = document.getElementById('historico-lista');
+            
+            if (!db.plantoes.length) {
+                el.innerHTML = '<p style="font-size:12px;color:#666;text-align:center;padding:20px;">Nenhum plantão registrado ainda.</p>';
+                return;
+            }
+            
+            var html = '<table class="payment-table">';
+            html += '<thead><tr><th>ID</th><th>Data</th><th>Hora</th><th>Funcionário</th><th>Tipo</th><th>Motivo</th><th>Autor.</th><th>Valor</th><th>Status</th></tr></thead>';
+            html += '<tbody>';
+            
+            db.plantoes.forEach(p => {
+                var statusBadge = '';
+                if (p.status === 'pendente') statusBadge = '<span class="badge badge-warn">Pendente</span>';
+                else if (p.status === 'aprovado') statusBadge = '<span class="badge badge-ok">Aprovado</span>';
+                else if (p.status === 'pago') statusBadge = '<span class="badge badge-paid">✅ PAGO</span>';
+                else if (p.status === 'rejeitado') statusBadge = '<span class="badge badge-danger">Rejeitado</span>';
+                
+                html += '<tr>';
+                html += '<td style="font-size:10px;color:#666;">' + p.id + '</td>';
+                html += '<td>' + p.data + '</td>';
+                html += '<td>' + p.hora + '</td>';
+                html += '<td>' + p.func + '</td>';
+                html += '<td style="font-size:11px;">' + p.tipo + '</td>';
+                html += '<td style="font-size:11px;">' + (p.motivo || '-') + '</td>';
+                html += '<td style="font-size:11px;">' + (p.autor || '-') + '</td>';
+                html += '<td><strong>R$' + p.valor + '</strong></td>';
+                html += '<td>' + statusBadge + '</td>';
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            
+            var total = db.plantoes.reduce((s, p) => s + p.valor, 0);
+            var totalPago = db.plantoes.filter(p => p.status === 'pago').reduce((s, p) => s + p.valor, 0);
+            
+            html += '<div style="margin-top:16px;padding:12px;background:var(--light);border-radius:6px;">';
+            html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:13px;">';
+            html += '<div><strong>Total Plantões:</strong> ' + db.plantoes.length + '</div>';
+            html += '<div><strong>Valor Total:</strong> R$' + total.toFixed(2) + '</div>';
+            html += '<div><strong>Total Pago:</strong> <span style="color:var(--success);">R$' + totalPago.toFixed(2) + '</span></div>';
+            html += '</div></div>';
+            
+            el.innerHTML = html;
+        }
+        
+        function exportarXLS() {
+            if (!db.plantoes.length) {
+                alert('Não há plantões para exportar!');
+                return;
+            }
+            
+            var dados = db.plantoes.map(p => ({
+                'ID': p.id,
+                'Data': p.data,
+                'Hora': p.hora,
+                'Funcionário': p.func,
+                'Tipo de Plantão': p.tipo,
+                'Motivo': p.motivo || '',
+                'Autorizado por': p.autor || '',
+                'Valor (R$)': p.valor,
+                'Status': p.status,
+                'Pago?': p.status === 'pago' ? 'SIM' : 'NÃO'
+            }));
+            
+            var ws = XLSX.utils.json_to_sheet(dados);
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Plantões");
+            
+            var hoje = new Date();
+            var filename = 'historico_plantoes_' + hoje.toLocaleDateString('pt-BR').replace(/\//g, '-') + '.xlsx';
+            
+            XLSX.writeFile(wb, filename);
         }
         
         function renderCad() {
             var html = '<div style="background:#f9fafb;border:1px solid var(--border);border-radius:6px;padding:12px;font-size:11px;font-family:monospace;max-height:200px;overflow-y:auto;">';
             html += '<strong>Funcionários (' + db.funcionarios.length + '):</strong><br>';
-            db.funcionarios.forEach(f => html += '- ' + f.nome + '<br>');
+            db.funcionarios.forEach(f => html += '- ' + f.nome + ' (' + f.cargo + ')<br>');
             html += '<br><strong>Tipos (' + db.tipos.length + '):</strong><br>';
             db.tipos.forEach(t => html += '- ' + t.nome + ' (R$' + t.valor + ')<br>');
+            html += '<br><strong>Motivos (' + db.motivos.length + '):</strong><br>';
+            db.motivos.forEach(m => html += '- ' + m + '<br>');
             html += '</div>';
             
             document.getElementById('cad-content').innerHTML = html;
         }
         
         function mostrarURLs() {
+            document.getElementById('url-func').textContent = BASE_URL + '?tipo=funcionario';
             document.getElementById('url-enf').textContent = BASE_URL + '?tipo=enfermeira';
             document.getElementById('url-gest').textContent = BASE_URL + '?tipo=gestor';
         }
         
         function gerarQRCode() {
             var url = BASE_URL + '?tipo=funcionario';
-            var qrDiv = document.getElementById('qrcode');
-            qrDiv.innerHTML = '';
+            var qrURL = 'https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=' + encodeURIComponent(url);
             
-            try {
-                // Criar elemento canvas
-                var canvas = document.createElement('canvas');
-                
-                // Usar a biblioteca QRCode
-                if (typeof QRCode !== 'undefined' && QRCode.toCanvas) {
-                    QRCode.toCanvas(canvas, url, { width: 200, margin: 2 }, function(error) {
-                        if (error) {
-                            alert('Erro ao gerar QR Code: ' + error);
-                            return;
-                        }
-                        qrDiv.appendChild(canvas);
-                        qrCodeCanvas = canvas;
-                        document.getElementById('qr-display').style.display = 'block';
-                        document.getElementById('qr-url').textContent = url;
-                    });
-                } else {
-                    alert('Biblioteca QR Code ainda não carregou. Aguarde alguns segundos e tente novamente.');
-                }
-            } catch (e) {
-                alert('Erro ao gerar QR Code: ' + e.message);
-            }
+            var img = document.getElementById('qr-image');
+            img.src = qrURL;
+            
+            document.getElementById('qr-display').style.display = 'block';
+            document.getElementById('qr-url').textContent = url;
         }
         
         function baixarQRCode() {
-            if (!qrCodeCanvas) {
+            var img = document.getElementById('qr-image');
+            if (!img.src) {
                 alert('Gere o QR Code primeiro!');
                 return;
             }
             
             var link = document.createElement('a');
             link.download = 'qrcode-funcionarios.png';
-            link.href = qrCodeCanvas.toDataURL();
+            link.href = img.src;
             link.click();
         }
         
         function copiarURL(tipo) {
-            var url = tipo === 'enfermeira' ? BASE_URL + '?tipo=enfermeira' : BASE_URL + '?tipo=gestor';
-            navigator.clipboard.writeText(url).then(() => alert('✅ Link copiado!'));
+            var url = '';
+            if (tipo === 'funcionario') url = BASE_URL + '?tipo=funcionario';
+            else if (tipo === 'enfermeira') url = BASE_URL + '?tipo=enfermeira';
+            else if (tipo === 'gestor') url = BASE_URL + '?tipo=gestor';
+            
+            navigator.clipboard.writeText(url).then(() => {
+                alert('✅ Link copiado com sucesso!');
+            }).catch(() => {
+                alert('❌ Erro ao copiar. Selecione e copie manualmente.');
+            });
         }
     </script>
 </body>
