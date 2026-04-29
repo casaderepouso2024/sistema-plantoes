@@ -1,4 +1,4 @@
- [index_NOVO_GITHUB (2).html](https://github.com/user-attachments/files/27217184/index_NOVO_GITHUB.2.html)
+[SISTEMA_FINAL_COMPLETO.html](https://github.com/user-attachments/files/27218951/SISTEMA_FINAL_COMPLETO.html)
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -695,7 +695,7 @@
                     
                     <div id="qr-display" style="display:none;margin-top:20px;">
                         <div class="qr-code-display">
-                            <img id="qr-image" alt="QR Code" />
+                            <div id="qrcode" style="display:flex;justify-content:center;"></div>
                         </div>
                         
                         <button class="btn btn-success" onclick="baixarQRCode()">
@@ -710,6 +710,7 @@
     </div>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script>
         var SHEET_ID = "1TVYsc9GnaK_T1YILkdgBOJSyDA4CZbEyvzk47Izr-go";
         var API_KEY = "AIzaSyC2Vb-uj16w6NnlSk6sOAm6S1Uj5HpIh40";
@@ -718,13 +719,21 @@
         var urlParams = new URLSearchParams(window.location.search);
         var tipoAcesso = urlParams.get('tipo') || 'gestor';
         
+        var _plantoesSalvos = JSON.parse(localStorage.getItem('plantoes')) || [];
+        _plantoesSalvos = _plantoesSalvos.map(function(p) {
+            if (p.dataObj && typeof p.dataObj === 'string') {
+                p.dataObj = new Date(p.dataObj);
+            }
+            return p;
+        });
+        
         var db = {
             funcionarios: [],
             tipos: [],
             autorizadores: [],
             aprovadores: [],
             motivos: [],
-            plantoes: JSON.parse(localStorage.getItem('plantoes')) || []
+            plantoes: _plantoesSalvos
         };
         
         var hoje = new Date();
@@ -1052,11 +1061,11 @@
             }
             
             for (var d = 1; d <= diasMes; d++) {
-                var plantoesDia = db.plantoes.filter(p => 
-                    p.dataObj && p.dataObj.getFullYear() === calAno && 
-                    p.dataObj.getMonth() === calMes && 
-                    p.dataObj.getDate() === d
-                );
+                var plantoesDia = db.plantoes.filter(function(p) {
+                    if (!p.dataObj) return false;
+                    var dt = (p.dataObj instanceof Date) ? p.dataObj : new Date(p.dataObj);
+                    return dt.getFullYear() === calAno && dt.getMonth() === calMes && dt.getDate() === d;
+                });
                 
                 var statusClass = '';
                 if (plantoesDia.some(p => p.status === 'pago')) statusClass = 'paid';
@@ -1088,11 +1097,11 @@
         }
         
         function selecionarDia(d) {
-            var plantoesDia = db.plantoes.filter(p => 
-                p.dataObj && p.dataObj.getFullYear() === calAno && 
-                p.dataObj.getMonth() === calMes && 
-                p.dataObj.getDate() === d
-            );
+            var plantoesDia = db.plantoes.filter(function(p) {
+                if (!p.dataObj) return false;
+                var dt = (p.dataObj instanceof Date) ? p.dataObj : new Date(p.dataObj);
+                return dt.getFullYear() === calAno && dt.getMonth() === calMes && dt.getDate() === d;
+            });
             
             var det = document.getElementById('cal-detalhes');
             if (!plantoesDia.length) {
@@ -1121,66 +1130,124 @@
             }
         }
         
+        function toInputDate(d) {
+            var mm = String(d.getMonth() + 1).padStart(2, '0');
+            var dd = String(d.getDate()).padStart(2, '0');
+            return d.getFullYear() + '-' + mm + '-' + dd;
+        }
+        
         function filtroRapido(tipo) {
-            var de = new Date();
-            var ate = new Date();
+            var agora = new Date();
+            var de, ate;
             
-            if (tipo === 7) de.setDate(ate.getDate() - 7);
-            else if (tipo === 'mes') de = new Date(ate.getFullYear(), ate.getMonth(), 1);
-            else if (tipo === 'tudo') de = new Date(2000, 0, 1);
+            if (tipo === 7) {
+                ate = new Date(agora);
+                de = new Date(agora);
+                de.setDate(agora.getDate() - 7);
+            } else if (tipo === 'semana') {
+                // Semana passada Domingo a Sabado
+                ate = new Date(agora);
+                ate.setDate(agora.getDate() - agora.getDay() - 1);
+                de = new Date(ate);
+                de.setDate(ate.getDate() - 6);
+            } else if (tipo === 'mes') {
+                de = new Date(agora.getFullYear(), agora.getMonth(), 1);
+                ate = new Date(agora);
+            } else if (tipo === 'mes-ant') {
+                de = new Date(agora.getFullYear(), agora.getMonth() - 1, 1);
+                ate = new Date(agora.getFullYear(), agora.getMonth(), 0);
+            } else if (tipo === 'tudo') {
+                de = new Date(2000, 0, 1);
+                ate = new Date(agora);
+            }
             
-            document.getElementById('tab-de').valueAsDate = de;
-            document.getElementById('tab-ate').valueAsDate = ate;
+            document.getElementById('tab-de').value = toInputDate(de);
+            document.getElementById('tab-ate').value = toInputDate(ate);
             renderTab();
         }
         
         function renderTab() {
             var el = document.getElementById('tab-lista');
-            var filtrados = db.plantoes.filter(p => p.status === 'aprovado' || p.status === 'pago');
+            var deVal = document.getElementById('tab-de').value;
+            var ateVal = document.getElementById('tab-ate').value;
+            var de = deVal ? new Date(deVal + 'T00:00:00') : null;
+            var ate = ateVal ? new Date(ateVal + 'T23:59:59') : null;
+            
+            // Filtrar por status e por intervalo de datas
+            var filtrados = db.plantoes.filter(function(p) {
+                if (p.status !== 'aprovado' && p.status !== 'pago') return false;
+                if (!p.dataObj) return false;
+                var dataP = p.dataObj instanceof Date ? p.dataObj : new Date(p.dataObj);
+                if (de && dataP < de) return false;
+                if (ate && dataP > ate) return false;
+                return true;
+            });
             
             if (!filtrados.length) {
-                el.innerHTML = '<div class="card"><p style="font-size:12px;color:#666;">Nenhum plantão aprovado.</p></div>';
+                el.innerHTML = '<div class="card"><p style="font-size:12px;color:#666;">Nenhum plantão aprovado neste período.</p></div>';
                 return;
             }
             
-            var html = '<div class="card">';
-            html += '<table class="payment-table">';
-            html += '<thead><tr><th>Data</th><th>Funcionário</th><th>Tipo</th><th>Valor</th><th style="text-align:center;width:80px;">✅ Pago?</th></tr></thead>';
-            html += '<tbody>';
-            
-            filtrados.forEach(p => {
-                var isPago = p.status === 'pago';
-                var rowClass = isPago ? 'pago' : '';
-                
-                html += '<tr class="' + rowClass + '">';
-                html += '<td>' + p.data + '</td>';
-                html += '<td>' + p.func + '</td>';
-                html += '<td style="font-size:11px;">' + p.tipo + '</td>';
-                html += '<td><strong>R$' + p.valor + '</strong></td>';
-                html += '<td style="text-align:center;">';
-                
-                if (isPago) {
-                    html += '<input type="checkbox" checked disabled style="cursor:not-allowed;">';
-                } else {
-                    html += '<input type="checkbox" onchange="marcarPago(' + p.id + ', this.checked)">';
-                }
-                
-                html += '</td></tr>';
+            // Agrupar por funcionário
+            var grupos = {};
+            filtrados.forEach(function(p) {
+                if (!grupos[p.func]) grupos[p.func] = [];
+                grupos[p.func].push(p);
             });
             
-            html += '</tbody></table>';
+            var html = '';
+            var totalGeralGlobal = 0;
+            var totalPagoGlobal = 0;
             
-            var totalGeral = filtrados.reduce((s, p) => s + p.valor, 0);
-            var totalPago = filtrados.filter(p => p.status === 'pago').reduce((s, p) => s + p.valor, 0);
-            var totalAPagar = totalGeral - totalPago;
+            Object.keys(grupos).sort().forEach(function(nome) {
+                var plantoesFunc = grupos[nome];
+                var somaFunc = plantoesFunc.reduce(function(s, p) { return s + p.valor; }, 0);
+                var somaPagoFunc = plantoesFunc.filter(function(p) { return p.status === 'pago'; }).reduce(function(s, p) { return s + p.valor; }, 0);
+                totalGeralGlobal += somaFunc;
+                totalPagoGlobal += somaPagoFunc;
+                
+                html += '<div class="card" style="margin-bottom:12px;">';
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid var(--primary);">';
+                html += '<strong style="font-size:14px;color:var(--primary);">👤 ' + nome + '</strong>';
+                html += '<span style="font-size:13px;font-weight:600;">Total: R$' + somaFunc.toFixed(2) + '</span>';
+                html += '</div>';
+                
+                html += '<table class="payment-table"><thead><tr><th>Data</th><th>Tipo</th><th>Valor</th><th style="text-align:center;width:72px;">✅ Pago?</th></tr></thead><tbody>';
+                
+                plantoesFunc.forEach(function(p) {
+                    var isPago = p.status === 'pago';
+                    html += '<tr class="' + (isPago ? 'pago' : '') + '">';
+                    html += '<td>' + p.data + '</td>';
+                    html += '<td style="font-size:11px;">' + p.tipo + '</td>';
+                    html += '<td><strong>R$' + p.valor + '</strong></td>';
+                    html += '<td style="text-align:center;">';
+                    if (isPago) {
+                        html += '<input type="checkbox" checked disabled style="cursor:not-allowed;">';
+                    } else {
+                        html += '<input type="checkbox" onchange="marcarPago(' + p.id + ', this.checked)">';
+                    }
+                    html += '</td></tr>';
+                });
+                
+                html += '</tbody></table>';
+                
+                // Subtotal por funcionário
+                var apagarFunc = somaFunc - somaPagoFunc;
+                html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">';
+                html += '<div>Pago: <strong style="color:var(--success);">R$' + somaPagoFunc.toFixed(2) + '</strong></div>';
+                html += '<div>A Pagar: <strong style="color:var(--warning);">R$' + apagarFunc.toFixed(2) + '</strong></div>';
+                html += '</div></div>';
+            });
             
-            html += '<div style="margin-top:16px;padding-top:16px;border-top:2px solid var(--border);">';
-            html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:13px;">';
-            html += '<div><span style="color:#666;">Total Geral:</span><br><strong style="font-size:18px;">R$' + totalGeral.toFixed(2) + '</strong></div>';
-            html += '<div><span style="color:#666;">Total Pago:</span><br><strong style="font-size:18px;color:var(--success);">R$' + totalPago.toFixed(2) + '</strong></div>';
-            html += '<div><span style="color:#666;">A Pagar:</span><br><strong style="font-size:18px;color:var(--warning);">R$' + totalAPagar.toFixed(2) + '</strong></div>';
+            // Totais globais
+            var totalAPagarGlobal = totalGeralGlobal - totalPagoGlobal;
+            html += '<div class="card" style="background:var(--light);">';
+            html += '<strong style="font-size:13px;">📊 Totais do Período</strong>';
+            html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:13px;margin-top:10px;">';
+            html += '<div><span style="color:#666;">Total Geral:</span><br><strong style="font-size:18px;">R$' + totalGeralGlobal.toFixed(2) + '</strong></div>';
+            html += '<div><span style="color:#666;">Total Pago:</span><br><strong style="font-size:18px;color:var(--success);">R$' + totalPagoGlobal.toFixed(2) + '</strong></div>';
+            html += '<div><span style="color:#666;">A Pagar:</span><br><strong style="font-size:18px;color:var(--warning);">R$' + totalAPagarGlobal.toFixed(2) + '</strong></div>';
             html += '</div></div>';
-            html += '</div>';
             
             el.innerHTML = html;
         }
@@ -1295,26 +1362,40 @@
         
         function gerarQRCode() {
             var url = BASE_URL + '?tipo=funcionario';
-            var qrURL = 'https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=' + encodeURIComponent(url);
+            var qrDiv = document.getElementById('qrcode');
+            qrDiv.innerHTML = '';
             
-            var img = document.getElementById('qr-image');
-            img.src = qrURL;
+            // qrcodejs: sintaxe new QRCode(element, opcoes)
+            new QRCode(qrDiv, {
+                text: url,
+                width: 200,
+                height: 200,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
             
             document.getElementById('qr-display').style.display = 'block';
             document.getElementById('qr-url').textContent = url;
         }
         
         function baixarQRCode() {
-            var img = document.getElementById('qr-image');
-            if (!img.src) {
-                alert('Gere o QR Code primeiro!');
-                return;
-            }
+            var qrDiv = document.getElementById('qrcode');
+            var canvas = qrDiv.querySelector('canvas');
+            var img = qrDiv.querySelector('img');
             
             var link = document.createElement('a');
             link.download = 'qrcode-funcionarios.png';
-            link.href = img.src;
-            link.click();
+            
+            if (canvas) {
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } else if (img) {
+                link.href = img.src;
+                link.click();
+            } else {
+                alert('Gere o QR Code primeiro!');
+            }
         }
         
         function copiarURL(tipo) {
