@@ -1,4 +1,4 @@
-[SISTEMA_FINAL_COMPLETO.html](https://github.com/user-attachments/files/27218951/SISTEMA_FINAL_COMPLETO.html)
+[SISTEMA_FINAL_COMPLETO.html](https://github.com/user-attachments/files/27480405/SISTEMA_FINAL_COMPLETO.html)
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -715,6 +715,8 @@
         var SHEET_ID = "1TVYsc9GnaK_T1YILkdgBOJSyDA4CZbEyvzk47Izr-go";
         var API_KEY = "AIzaSyC2Vb-uj16w6NnlSk6sOAm6S1Uj5HpIh40";
         var BASE_URL = window.location.origin + window.location.pathname;
+        // Cole aqui a URL do Apps Script após configurar (veja APPS_SCRIPT_BACKEND.gs)
+        var APPS_SCRIPT_URL = '';
         
         var urlParams = new URLSearchParams(window.location.search);
         var tipoAcesso = urlParams.get('tipo') || 'gestor';
@@ -933,7 +935,8 @@
             db.tipos.forEach(t => {
                 var opt = document.createElement('option');
                 opt.value = t.nome;
-                opt.textContent = t.nome + ' — R$' + t.valor;
+                // Valor R$ só aparece para gestor/enfermeira, não para funcionário
+                opt.textContent = (tipoAcesso === 'funcionario') ? t.nome : t.nome + ' — R$' + t.valor;
                 ts.appendChild(opt);
             });
             
@@ -974,28 +977,39 @@
                 return;
             }
             
+            var agora = new Date();
             var t = db.tipos.find(x => x.nome === tipo);
             var p = {
                 id: Date.now(),
                 func: func,
                 tipo: tipo,
                 motivo: document.getElementById('ci-motivo').value || '',
-                data: hoje.toLocaleDateString('pt-BR'),
-                dataObj: new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()),
-                hora: hoje.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                data: agora.toLocaleDateString('pt-BR'),
+                dataObj: new Date(agora.getFullYear(), agora.getMonth(), agora.getDate()),
+                dataISO: agora.toISOString(),
+                hora: agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
                 valor: t ? t.valor : 0,
                 status: 'pendente',
                 autor: document.getElementById('ci-autor').value || ''
             };
             
+            // Salva localmente
             db.plantoes.unshift(p);
             localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
+            
+            // Salva no Apps Script (compartilhado entre dispositivos)
+            if (APPS_SCRIPT_URL) {
+                fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'add', plantao: p })
+                }).catch(function() {});
+            }
             
             document.getElementById('ci-form').style.display = 'none';
             document.getElementById('ci-sucesso').style.display = 'block';
         }
         
-        function renderEnf() {
+        function renderEnfUI() {
             var pend = db.plantoes.filter(p => p.status === 'pendente');
             var aprov = db.plantoes.filter(p => p.status === 'aprovado');
             var rej = db.plantoes.filter(p => p.status === 'rejeitado');
@@ -1027,11 +1041,53 @@
             `).join('');
         }
         
+        function renderEnf() {
+            // Se Apps Script configurado, busca plantões remotos (de outros dispositivos)
+            if (APPS_SCRIPT_URL) {
+                document.getElementById('lista-enf').innerHTML = '<p style="font-size:12px;color:#666;">🔄 Buscando plantões...</p>';
+                fetch(APPS_SCRIPT_URL)
+                    .then(function(r) { return r.json(); })
+                    .then(function(remotos) {
+                        // Mescla remotos com locais, sem duplicar por id
+                        var idsLocais = db.plantoes.map(function(p) { return String(p.id); });
+                        remotos.forEach(function(r) {
+                            if (!idsLocais.includes(String(r.id))) {
+                                r.dataObj = r.dataISO ? new Date(r.dataISO) : new Date();
+                                r.valor = parseFloat(r.valor) || 0;
+                                db.plantoes.push(r);
+                            } else {
+                                // Atualiza status do remoto no local (aprovações feitas em outro device)
+                                db.plantoes = db.plantoes.map(function(p) {
+                                    if (String(p.id) === String(r.id) && p.status !== r.status) {
+                                        return Object.assign({}, p, { status: r.status });
+                                    }
+                                    return p;
+                                });
+                            }
+                        });
+                        localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
+                        renderEnfUI();
+                    })
+                    .catch(function() {
+                        // Fallback: usa apenas localStorage
+                        renderEnfUI();
+                    });
+            } else {
+                renderEnfUI();
+            }
+        }
+        
         function aprovar(id) {
             db.plantoes = db.plantoes.map(p => 
                 p.id === id ? {...p, status: 'aprovado'} : p
             );
             localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
+            if (APPS_SCRIPT_URL) {
+                fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'update', plantao: { id: id, status: 'aprovado' } })
+                }).catch(function() {});
+            }
             renderEnf();
             renderCal();
         }
@@ -1041,6 +1097,12 @@
                 p.id === id ? {...p, status: 'rejeitado'} : p
             );
             localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
+            if (APPS_SCRIPT_URL) {
+                fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'update', plantao: { id: id, status: 'rejeitado' } })
+                }).catch(function() {});
+            }
             renderEnf();
             renderCal();
         }
