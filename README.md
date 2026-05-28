@@ -1,4 +1,4 @@
-[SISTEMA_FINAL_COMPLETO.html](https://github.com/user-attachments/files/27480649/SISTEMA_FINAL_COMPLETO.html)
+[plantoes_v3.html](https://github.com/user-attachments/files/28366048/plantoes_v3.html)
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -535,6 +535,7 @@
                         <div class="success-icon">✓</div>
                         <div class="success-title">Obrigado!</div>
                         <div class="success-text">Bom plantão! 🏥</div>
+                        <div id="ci-localizacao" style="margin-top:12px;font-size:12px;color:#166534;"></div>
                     </div>
                 </div>
             </div>
@@ -715,8 +716,8 @@
         var SHEET_ID = "1TVYsc9GnaK_T1YILkdgBOJSyDA4CZbEyvzk47Izr-go";
         var API_KEY = "AIzaSyC2Vb-uj16w6NnlSk6sOAm6S1Uj5HpIh40";
         var BASE_URL = window.location.origin + window.location.pathname;
-        // Cole aqui a URL do Apps Script após configurar (veja APPS_SCRIPT_BACKEND.gs)
-        var APPS_SCRIPT_URL = '';
+        // Firebase Realtime Database - banco compartilhado gratuito entre todos os dispositivos
+        var FIREBASE_URL = 'https://plantoes-casa-repouso-default-rtdb.firebaseio.com';
         
         var urlParams = new URLSearchParams(window.location.search);
         var tipoAcesso = urlParams.get('tipo') || 'gestor';
@@ -990,23 +991,70 @@
                 hora: agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
                 valor: t ? t.valor : 0,
                 status: 'pendente',
-                autor: document.getElementById('ci-autor').value || ''
+                autor: document.getElementById('ci-autor').value || '',
+                endereco: ''
             };
             
-            // Salva localmente
-            db.plantoes.unshift(p);
-            localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
-            
-            // Salva no Apps Script (compartilhado entre dispositivos)
-            if (APPS_SCRIPT_URL) {
-                fetch(APPS_SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'add', plantao: p })
-                }).catch(function() {});
-            }
-            
+            // Esconde form e mostra sucesso já (com localização pendente)
             document.getElementById('ci-form').style.display = 'none';
             document.getElementById('ci-sucesso').style.display = 'block';
+            var locDiv = document.getElementById('ci-localizacao');
+            locDiv.textContent = '📍 Obtendo localização...';
+            
+            function salvarPlantao(endereco) {
+                p.endereco = endereco || '';
+                db.plantoes.unshift(p);
+                localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
+                // Salva no Firebase (compartilhado entre TODOS os dispositivos)
+                fetch(FIREBASE_URL + '/plantoes/' + p.id + '.json', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(p)
+                }).then(function(r) {
+                    if (!r.ok) console.warn('Firebase: erro ao salvar plantão');
+                }).catch(function(e) {
+                    console.warn('Firebase offline, salvo apenas localmente:', e);
+                });
+            }
+            
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(pos) {
+                        var lat = pos.coords.latitude;
+                        var lon = pos.coords.longitude;
+                        // Reverse geocode via OpenStreetMap Nominatim (gratuito)
+                        fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lon, {
+                            headers: { 'Accept-Language': 'pt-BR' }
+                        })
+                        .then(function(r) { return r.json(); })
+                        .then(function(geo) {
+                            var ad = geo.address || {};
+                            var partes = [];
+                            if (ad.road) partes.push(ad.road);
+                            if (ad.suburb || ad.neighbourhood) partes.push(ad.suburb || ad.neighbourhood);
+                            if (ad.city || ad.town || ad.village) partes.push(ad.city || ad.town || ad.village);
+                            if (ad.state) partes.push(ad.state);
+                            var endereco = partes.join(', ');
+                            locDiv.textContent = '📍 ' + endereco;
+                            salvarPlantao(endereco);
+                        })
+                        .catch(function() {
+                            var coords = lat.toFixed(5) + ', ' + lon.toFixed(5);
+                            locDiv.textContent = '📍 ' + coords;
+                            salvarPlantao(coords);
+                        });
+                    },
+                    function() {
+                        // Usuário negou ou erro de GPS
+                        locDiv.textContent = '📍 Localização não disponível';
+                        salvarPlantao('');
+                    },
+                    { timeout: 10000 }
+                );
+            } else {
+                locDiv.textContent = '';
+                salvarPlantao('');
+            }
         }
         
         function renderEnfUI() {
@@ -1042,39 +1090,28 @@
         }
         
         function renderEnf() {
-            // Se Apps Script configurado, busca plantões remotos (de outros dispositivos)
-            if (APPS_SCRIPT_URL) {
-                document.getElementById('lista-enf').innerHTML = '<p style="font-size:12px;color:#666;">🔄 Buscando plantões...</p>';
-                fetch(APPS_SCRIPT_URL)
-                    .then(function(r) { return r.json(); })
-                    .then(function(remotos) {
-                        // Mescla remotos com locais, sem duplicar por id
-                        var idsLocais = db.plantoes.map(function(p) { return String(p.id); });
-                        remotos.forEach(function(r) {
-                            if (!idsLocais.includes(String(r.id))) {
-                                r.dataObj = r.dataISO ? new Date(r.dataISO) : new Date();
-                                r.valor = parseFloat(r.valor) || 0;
-                                db.plantoes.push(r);
-                            } else {
-                                // Atualiza status do remoto no local (aprovações feitas em outro device)
-                                db.plantoes = db.plantoes.map(function(p) {
-                                    if (String(p.id) === String(r.id) && p.status !== r.status) {
-                                        return Object.assign({}, p, { status: r.status });
-                                    }
-                                    return p;
-                                });
-                            }
+            // Busca SEMPRE do Firebase (banco compartilhado entre todos os dispositivos)
+            document.getElementById('lista-enf').innerHTML = '<p style="font-size:12px;color:#666;">🔄 Buscando plantões...</p>';
+            fetch(FIREBASE_URL + '/plantoes.json')
+                .then(function(r) { return r.json(); })
+                .then(function(dados) {
+                    if (dados && typeof dados === 'object') {
+                        var remotos = Object.values(dados);
+                        // Reconstrói db.plantoes com dados do Firebase (fonte da verdade)
+                        db.plantoes = remotos.map(function(r) {
+                            r.dataObj = r.dataISO ? new Date(r.dataISO) : new Date(r.data.split('/').reverse().join('-'));
+                            r.valor = parseFloat(r.valor) || 0;
+                            return r;
                         });
+                        // Ordena do mais recente pro mais antigo
+                        db.plantoes.sort(function(a, b) { return b.id - a.id; });
                         localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
-                        renderEnfUI();
-                    })
-                    .catch(function() {
-                        // Fallback: usa apenas localStorage
-                        renderEnfUI();
-                    });
-            } else {
-                renderEnfUI();
-            }
+                    }
+                    renderEnfUI();
+                })
+                .catch(function() {
+                    renderEnfUI();
+                });
         }
         
         function aprovar(id) {
@@ -1082,12 +1119,12 @@
                 p.id === id ? {...p, status: 'aprovado'} : p
             );
             localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
-            if (APPS_SCRIPT_URL) {
-                fetch(APPS_SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'update', plantao: { id: id, status: 'aprovado' } })
-                }).catch(function() {});
-            }
+            // Atualiza status no Firebase
+            fetch(FIREBASE_URL + '/plantoes/' + id + '/status.json', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify('aprovado')
+            }).catch(function() {});
             renderEnf();
             renderCal();
         }
@@ -1097,12 +1134,12 @@
                 p.id === id ? {...p, status: 'rejeitado'} : p
             );
             localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
-            if (APPS_SCRIPT_URL) {
-                fetch(APPS_SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'update', plantao: { id: id, status: 'rejeitado' } })
-                }).catch(function() {});
-            }
+            // Atualiza status no Firebase
+            fetch(FIREBASE_URL + '/plantoes/' + id + '/status.json', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify('rejeitado')
+            }).catch(function() {});
             renderEnf();
             renderCal();
         }
@@ -1315,13 +1352,20 @@
         }
         
         function marcarPago(id, checked) {
+            var novoStatus = checked ? 'pago' : 'aprovado';
             db.plantoes = db.plantoes.map(p => {
                 if (p.id === id) {
-                    return {...p, status: checked ? 'pago' : 'aprovado'};
+                    return {...p, status: novoStatus};
                 }
                 return p;
             });
             localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
+            // Atualiza status no Firebase
+            fetch(FIREBASE_URL + '/plantoes/' + id + '/status.json', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(novoStatus)
+            }).catch(function() {});
             renderTab();
             renderCal();
             renderHistorico();
@@ -1336,7 +1380,7 @@
             }
             
             var html = '<table class="payment-table">';
-            html += '<thead><tr><th>ID</th><th>Data</th><th>Hora</th><th>Funcionário</th><th>Tipo</th><th>Motivo</th><th>Autor.</th><th>Valor</th><th>Status</th></tr></thead>';
+            html += '<thead><tr><th>ID</th><th>Data</th><th>Hora</th><th>Funcionário</th><th>Tipo</th><th>Motivo</th><th>Autor.</th><th>Valor</th><th>Status</th><th>Localização</th></tr></thead>';
             html += '<tbody>';
             
             db.plantoes.forEach(p => {
@@ -1356,6 +1400,7 @@
                 html += '<td style="font-size:11px;">' + (p.autor || '-') + '</td>';
                 html += '<td><strong>R$' + p.valor + '</strong></td>';
                 html += '<td>' + statusBadge + '</td>';
+                html += '<td style="font-size:10px;color:#666;">' + (p.endereco || '-') + '</td>';
                 html += '</tr>';
             });
             
