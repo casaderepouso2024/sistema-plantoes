@@ -1,4 +1,4 @@
-[plantoes_v4.html](https://github.com/user-attachments/files/28366829/plantoes_v4.html)
+[plantoes_v5.html](https://github.com/user-attachments/files/28368421/plantoes_v5.html)
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -1163,11 +1163,17 @@
             // Segurança extra: não aprova se menos de 10 caracteres
             if (motivoEnf.length < 10) return;
             
+            // 1. Atualiza localmente IMEDIATO (UI responde na hora)
             db.plantoes = db.plantoes.map(p => 
                 p.id === id ? {...p, status: 'aprovado', motivoEnf: motivoEnf} : p
             );
             localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
-            // Atualiza status e motivoEnf no Firebase
+            
+            // 2. Renderiza UI imediatamente com dado local (sem esperar Firebase)
+            renderEnfUI();
+            renderCal();
+            
+            // 3. Salva no Firebase em segundo plano (não bloqueia a UI)
             fetch(FIREBASE_URL + '/plantoes/' + id + '/status.json', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -1178,8 +1184,6 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(motivoEnf)
             }).catch(function() {});
-            renderEnf();
-            renderCal();
         }
         
         function rejeitar(id) {
