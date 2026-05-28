@@ -1,4 +1,4 @@
-[plantoes_v3.html](https://github.com/user-attachments/files/28366048/plantoes_v3.html)
+[plantoes_v4.html](https://github.com/user-attachments/files/28366829/plantoes_v4.html)
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -1080,13 +1080,56 @@
                         <span class="badge badge-warn">Pendente</span>
                     </div>
                     <div class="item-sub">${p.tipo} · ${p.data} · R$${p.valor}</div>
-                    ${p.motivo ? '<div class="item-sub">Motivo: ' + p.motivo + '</div>' : ''}
+                    ${p.motivo ? '<div class="item-sub">Motivo do funcionário: ' + p.motivo + '</div>' : ''}
+                    <div style="margin-top:10px;">
+                        <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">
+                            Justificativa da enfermeira <span style="color:var(--danger);">*</span>
+                        </label>
+                        <textarea
+                            id="motivo-enf-${p.id}"
+                            placeholder="Descreva a justificativa para aprovação (mínimo 10 caracteres)..."
+                            oninput="verificarMotivoEnf(${p.id})"
+                            style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;resize:vertical;min-height:64px;"
+                        ></textarea>
+                        <div id="aviso-enf-${p.id}" style="font-size:10px;color:var(--danger);margin-top:2px;display:none;">
+                            Mínimo de 10 caracteres para aprovar.
+                        </div>
+                    </div>
                     <div style="display:flex;gap:8px;margin-top:8px;">
-                        <button class="btn btn-success btn-sm" style="flex:1;" onclick="aprovar(${p.id})">Aprovar</button>
+                        <button
+                            id="btn-aprovar-${p.id}"
+                            class="btn btn-success btn-sm"
+                            style="flex:1;opacity:0.4;cursor:not-allowed;"
+                            disabled
+                            onclick="aprovar(${p.id})"
+                        >Aprovar</button>
                         <button class="btn btn-danger btn-sm" style="flex:1;" onclick="rejeitar(${p.id})">Rejeitar</button>
                     </div>
                 </div>
             `).join('');
+        }
+        
+        function verificarMotivoEnf(id) {
+            var textarea = document.getElementById('motivo-enf-' + id);
+            var btn = document.getElementById('btn-aprovar-' + id);
+            var aviso = document.getElementById('aviso-enf-' + id);
+            if (!textarea || !btn) return;
+            var val = textarea.value.trim();
+            if (val.length >= 10) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+                aviso.style.display = 'none';
+            } else {
+                btn.disabled = true;
+                btn.style.opacity = '0.4';
+                btn.style.cursor = 'not-allowed';
+                if (val.length > 0) {
+                    aviso.style.display = 'block';
+                } else {
+                    aviso.style.display = 'none';
+                }
+            }
         }
         
         function renderEnf() {
@@ -1115,15 +1158,25 @@
         }
         
         function aprovar(id) {
+            var textarea = document.getElementById('motivo-enf-' + id);
+            var motivoEnf = textarea ? textarea.value.trim() : '';
+            // Segurança extra: não aprova se menos de 10 caracteres
+            if (motivoEnf.length < 10) return;
+            
             db.plantoes = db.plantoes.map(p => 
-                p.id === id ? {...p, status: 'aprovado'} : p
+                p.id === id ? {...p, status: 'aprovado', motivoEnf: motivoEnf} : p
             );
             localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
-            // Atualiza status no Firebase
+            // Atualiza status e motivoEnf no Firebase
             fetch(FIREBASE_URL + '/plantoes/' + id + '/status.json', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify('aprovado')
+            }).catch(function() {});
+            fetch(FIREBASE_URL + '/plantoes/' + id + '/motivoEnf.json', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(motivoEnf)
             }).catch(function() {});
             renderEnf();
             renderCal();
