@@ -1,4 +1,4 @@
-[plantoes_v6.html](https://github.com/user-attachments/files/28571676/plantoes_v6.html)
+[plantoes_v7.html](https://github.com/user-attachments/files/28571805/plantoes_v7.html)
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -1110,6 +1110,7 @@
                     </div>
                     <div class="item-sub">${p.tipo} · ${p.data} · R$${p.valor}</div>
                     ${p.motivo ? '<div class="item-sub">Motivo do funcionário: ' + p.motivo + '</div>' : ''}
+                    ${p.hospede ? '<div class="item-sub" style="color:#0369a1;font-weight:500;">🛏️ Hóspede: ' + p.hospede + '</div>' : ''}
                     <div style="margin-top:10px;">
                         <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">
                             Justificativa da enfermeira <span style="color:var(--danger);">*</span>
@@ -1466,7 +1467,7 @@
             }
             
             var html = '<table class="payment-table">';
-            html += '<thead><tr><th>ID</th><th>Data</th><th>Hora</th><th>Funcionário</th><th>Tipo</th><th>Motivo</th><th>Autor.</th><th>Valor</th><th>Status</th><th>Localização</th></tr></thead>';
+            html += '<thead><tr><th>ID</th><th>Data</th><th>Hora</th><th>Funcionário</th><th>Tipo</th><th>Motivo</th><th>Hóspede</th><th>Autor.</th><th>Valor</th><th>Status</th><th>Localização</th><th style="text-align:center;">Apagar</th></tr></thead>';
             html += '<tbody>';
             
             db.plantoes.forEach(p => {
@@ -1483,10 +1484,12 @@
                 html += '<td>' + p.func + '</td>';
                 html += '<td style="font-size:11px;">' + p.tipo + '</td>';
                 html += '<td style="font-size:11px;">' + (p.motivo || '-') + '</td>';
+                html += '<td style="font-size:11px;color:#0369a1;">' + (p.hospede || '-') + '</td>';
                 html += '<td style="font-size:11px;">' + (p.autor || '-') + '</td>';
                 html += '<td><strong>R$' + p.valor + '</strong></td>';
                 html += '<td>' + statusBadge + '</td>';
                 html += '<td style="font-size:10px;color:#666;">' + (p.endereco || '-') + '</td>';
+                html += '<td style="text-align:center;"><button onclick="apagarPlantao(' + p.id + ')" style="background:var(--danger);color:white;border:none;border-radius:4px;padding:4px 8px;font-size:11px;cursor:pointer;">🗑️</button></td>';
                 html += '</tr>';
             });
             
@@ -1503,6 +1506,21 @@
             html += '</div></div>';
             
             el.innerHTML = html;
+        }
+        
+        function apagarPlantao(id) {
+            if (!confirm('Tem certeza que deseja apagar este lançamento? Esta ação não pode ser desfeita.')) return;
+            // Remove localmente
+            db.plantoes = db.plantoes.filter(function(p) { return p.id !== id; });
+            localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
+            // Remove do Firebase
+            fetch(FIREBASE_URL + '/plantoes/' + id + '.json', {
+                method: 'DELETE'
+            }).catch(function() {});
+            // Atualiza telas
+            renderHistorico();
+            renderCal();
+            renderTab();
         }
         
         function exportarXLS() {
