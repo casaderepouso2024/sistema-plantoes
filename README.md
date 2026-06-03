@@ -1,4 +1,4 @@
-[plantoes_v5.html](https://github.com/user-attachments/files/28368421/plantoes_v5.html)
+[plantoes_v6.html](https://github.com/user-attachments/files/28571676/plantoes_v6.html)
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -517,11 +517,15 @@
                     </div>
                     <div class="field">
                         <label>Tipo de plantão</label>
-                        <select id="ci-tipo"></select>
+                        <select id="ci-tipo" onchange="verificarHospede()"></select>
                     </div>
                     <div class="field">
                         <label>Motivo</label>
                         <select id="ci-motivo"></select>
+                    </div>
+                    <div id="ci-hospede-field" class="field" style="display:none;">
+                        <label>Nome do hóspede <span style="color:var(--danger);">*</span></label>
+                        <input type="text" id="ci-hospede" placeholder="Digite o nome completo do hóspede..." />
                     </div>
                     <div class="field">
                         <label>Autorizado por</label>
@@ -776,7 +780,8 @@
                         if (dataConf.values[i][0]) {
                             db.tipos.push({
                                 nome: dataConf.values[i][0],
-                                valor: parseFloat(dataConf.values[i][1]) || 0
+                                valor: parseFloat(dataConf.values[i][1]) || 0,
+                                requerHospede: (dataConf.values[i][2] || '').trim().toLowerCase() === 'sim'
                             });
                         }
                     }
@@ -936,8 +941,8 @@
             db.tipos.forEach(t => {
                 var opt = document.createElement('option');
                 opt.value = t.nome;
-                // Valor R$ só aparece para gestor/enfermeira, não para funcionário
-                opt.textContent = (tipoAcesso === 'funcionario') ? t.nome : t.nome + ' — R$' + t.valor;
+                // Valor R$ nunca aparece no dropdown de check-in
+                opt.textContent = t.nome;
                 ts.appendChild(opt);
             });
             
@@ -969,12 +974,35 @@
             });
         }
         
+        function verificarHospede() {
+            var tipoNome = document.getElementById('ci-tipo').value;
+            var t = db.tipos.find(function(x) { return x.nome === tipoNome; });
+            var campo = document.getElementById('ci-hospede-field');
+            var input = document.getElementById('ci-hospede');
+            if (t && t.requerHospede) {
+                campo.style.display = 'block';
+                input.required = true;
+            } else {
+                campo.style.display = 'none';
+                input.required = false;
+                input.value = '';
+            }
+        }
+        
         function fazerCheckin() {
             var func = document.getElementById('ci-func').value;
             var tipo = document.getElementById('ci-tipo').value;
             
             if (!func || !tipo) {
                 alert('Por favor, preencha funcionário e tipo de plantão!');
+                return;
+            }
+            
+            // Validar hóspede se tipo exigir
+            var tSel = db.tipos.find(function(x) { return x.nome === tipo; });
+            var hospede = document.getElementById('ci-hospede').value.trim();
+            if (tSel && tSel.requerHospede && !hospede) {
+                alert('Por favor, informe o nome do hóspede para este tipo de plantão.');
                 return;
             }
             
@@ -992,6 +1020,7 @@
                 valor: t ? t.valor : 0,
                 status: 'pendente',
                 autor: document.getElementById('ci-autor').value || '',
+                hospede: hospede || '',
                 endereco: ''
             };
             
