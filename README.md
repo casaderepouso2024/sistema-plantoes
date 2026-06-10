@@ -1,4 +1,4 @@
-[plantoes_v7.html](https://github.com/user-attachments/files/28571805/plantoes_v7.html)
+[plantoes_v8.html](https://github.com/user-attachments/files/28797116/plantoes_v8.html)
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -470,9 +470,75 @@
         input[type="checkbox"]:disabled {
             cursor: not-allowed;
         }
+        
+        /* TELA DE LOGIN */
+        #login-screen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #fafafa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        #login-screen.hidden {
+            display: none;
+        }
+        
+        .login-box {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 32px 24px;
+            width: 100%;
+            max-width: 340px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        }
+        
+        .login-logo {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        
+        .login-logo h1 { font-size: 22px; color: var(--primary); }
+        .login-logo p  { font-size: 12px; color: #666; margin-top: 4px; }
+        
+        .login-error {
+            background: #fee2e2;
+            color: var(--danger);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 12px;
+            margin-bottom: 12px;
+            display: none;
+        }
     </style>
 </head>
 <body>
+
+    <!-- TELA DE LOGIN -->
+    <div id="login-screen">
+        <div class="login-box">
+            <div class="login-logo">
+                <h1>🏥 Plantões</h1>
+                <p>Casa de Repouso</p>
+            </div>
+            <div id="login-error" class="login-error">Usuário ou senha incorretos.</div>
+            <div class="field">
+                <label>Usuário</label>
+                <input type="text" id="login-user" placeholder="Digite seu usuário..." autocomplete="username" />
+            </div>
+            <div class="field">
+                <label>Senha</label>
+                <input type="password" id="login-pass" placeholder="Digite sua senha..."
+                    autocomplete="current-password"
+                    onkeydown="if(event.key==='Enter') fazerLogin()" />
+            </div>
+            <button class="btn btn-primary" onclick="fazerLogin()">Entrar</button>
+        </div>
+    </div>
+
     <div class="container">
         <div class="header">
             <h1>🏥 Plantões</h1>
@@ -858,7 +924,33 @@
             }
         }
         
-        window.addEventListener('DOMContentLoaded', function() {
+        // ── USUÁRIOS E SENHAS ──────────────────────────────────────────────────
+        var USUARIOS = [
+            { login: 'Michele',   senha: '4748', perfil: 'enfermeira' },
+            { login: 'Enfermagem', senha: '0664', perfil: 'enfermeira' },
+            { login: 'Thiago',    senha: '0034', perfil: 'gestor'     },
+            { login: 'Luciane',   senha: '1186', perfil: 'gestor'     }
+        ];
+        
+        function fazerLogin() {
+            var user = document.getElementById('login-user').value.trim();
+            var pass = document.getElementById('login-pass').value;
+            var erro = document.getElementById('login-error');
+            
+            var encontrado = USUARIOS.find(function(u) {
+                return u.login.toLowerCase() === user.toLowerCase() && u.senha === pass;
+            });
+            
+            if (!encontrado) {
+                erro.style.display = 'block';
+                document.getElementById('login-pass').value = '';
+                return;
+            }
+            
+            // Login OK: esconde tela de login e define perfil
+            erro.style.display = 'none';
+            document.getElementById('login-screen').classList.add('hidden');
+            tipoAcesso = encontrado.perfil;
             configurarAcesso();
             carregarDados();
             renderCal();
@@ -867,6 +959,17 @@
                 document.getElementById('links-section').style.display = 'block';
                 mostrarURLs();
             }
+        }
+        
+        window.addEventListener('DOMContentLoaded', function() {
+            if (tipoAcesso === 'funcionario') {
+                // Funcionário entra direto pelo QR Code, sem login
+                document.getElementById('login-screen').classList.add('hidden');
+                configurarAcesso();
+                carregarDados();
+                renderCal();
+            }
+            // Enfermeira e gestor ficam na tela de login
         });
         
         function configurarAcesso() {
