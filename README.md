@@ -1,4 +1,4 @@
-[plantoes_v8.html](https://github.com/user-attachments/files/28798530/plantoes_v8.html)
+[plantoes_v9.html](https://github.com/user-attachments/files/28799527/plantoes_v9.html)
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -513,6 +513,46 @@
             margin-bottom: 12px;
             display: none;
         }
+        .dash-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .dash-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+        
+        .dash-val {
+            font-size: 32px;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+        
+        .dash-lbl {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        .logout-btn {
+            background: none;
+            border: 1px solid rgba(255,255,255,0.5);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            float: right;
+            margin-top: -2px;
+        }
+        
+        .logout-btn:hover { background: rgba(255,255,255,0.15); }
     </style>
 </head>
 <body>
@@ -541,19 +581,60 @@
 
     <div class="container">
         <div class="header">
+            <button class="logout-btn" id="btn-logout" onclick="fazerLogout()" style="display:none;">Sair ↩</button>
             <h1>🏥 Plantões</h1>
             <p>Casa de Repouso</p>
+            <p id="usuario-logado" style="font-size:11px;opacity:0.8;margin-top:2px;"></p>
         </div>
         
         <div id="access-banner" class="access-banner"></div>
         
         <div class="nav" id="nav-container">
-            <button class="active" onclick="show('checkin')">Check-in</button>
+            <button onclick="show('dashboard')">Dashboard</button>
+            <button onclick="show('checkin')">Check-in</button>
             <button onclick="show('enfermeira')">Enfermeira</button>
             <button onclick="show('calendario')">Calendário</button>
             <button onclick="show('pagamentos')">Pagamentos</button>
             <button onclick="show('historico')">Histórico</button>
             <button onclick="show('cadastros')">Cadastros</button>
+        </div>
+        
+        <!-- DASHBOARD -->
+        <div class="screen" id="screen-dashboard">
+            <div class="card">
+                <h2>📊 Dashboard — Resumo do Mês</h2>
+                <p style="font-size:11px;color:#666;margin-bottom:16px;" id="dash-periodo"></p>
+                <div class="dash-grid">
+                    <div class="dash-card">
+                        <div class="dash-val" style="color:var(--primary);" id="dash-total">0</div>
+                        <div class="dash-lbl">Total de Plantões</div>
+                    </div>
+                    <div class="dash-card">
+                        <div class="dash-val" style="color:var(--warning);" id="dash-pendentes">0</div>
+                        <div class="dash-lbl">Pendentes de Aprovação</div>
+                    </div>
+                    <div class="dash-card">
+                        <div class="dash-val" style="color:var(--success);" id="dash-aprovados">0</div>
+                        <div class="dash-lbl">Aprovados</div>
+                    </div>
+                    <div class="dash-card">
+                        <div class="dash-val" style="color:var(--danger);" id="dash-rejeitados">0</div>
+                        <div class="dash-lbl">Rejeitados</div>
+                    </div>
+                </div>
+                <div class="dash-grid">
+                    <div class="dash-card" style="border-color:var(--success);">
+                        <div class="dash-val" style="color:var(--success);font-size:22px;" id="dash-val-pago">R$0</div>
+                        <div class="dash-lbl">Total Pago</div>
+                    </div>
+                    <div class="dash-card" style="border-color:var(--warning);">
+                        <div class="dash-val" style="color:var(--warning);font-size:22px;" id="dash-val-apagar">R$0</div>
+                        <div class="dash-lbl">A Pagar</div>
+                    </div>
+                </div>
+                <h3 style="font-size:13px;font-weight:600;margin-bottom:10px;">Por Funcionário este mês:</h3>
+                <div id="dash-por-func"></div>
+            </div>
         </div>
         
         <!-- CHECK-IN -->
@@ -788,6 +869,7 @@
         var BASE_URL = window.location.origin + window.location.pathname;
         // Firebase Realtime Database - banco compartilhado gratuito entre todos os dispositivos
         var FIREBASE_URL = 'https://plantoes-casa-repouso-default-rtdb.firebaseio.com';
+        var usuarioLogado = '';
         
         var urlParams = new URLSearchParams(window.location.search);
         var tipoAcesso = urlParams.get('tipo') || 'gestor';
@@ -925,6 +1007,16 @@
         }
         
         // ── USUÁRIOS E SENHAS ──────────────────────────────────────────────────
+        function fazerLogout() {
+            usuarioLogado = '';
+            tipoAcesso = '';
+            document.getElementById('usuario-logado').textContent = '';
+            document.getElementById('btn-logout').style.display = 'none';
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('login-user').value = '';
+            document.getElementById('login-pass').value = '';
+        }
+        
         var USUARIOS = [
             { login: 'Michele',   senha: '4748', perfil: 'enfermeira' },
             { login: 'Enfermagem', senha: '0664', perfil: 'enfermeira' },
@@ -951,6 +1043,10 @@
             erro.style.display = 'none';
             document.getElementById('login-screen').classList.add('hidden');
             tipoAcesso = encontrado.perfil;
+            usuarioLogado = encontrado.login;
+            // Mostrar nome do usuário e botão logout no header
+            document.getElementById('usuario-logado').textContent = 'Olá, ' + usuarioLogado;
+            document.getElementById('btn-logout').style.display = 'inline-block';
             configurarAcesso();
             carregarDados();
             renderCal();
@@ -958,6 +1054,7 @@
                 document.getElementById('qr-generator-section').style.display = 'block';
                 document.getElementById('links-section').style.display = 'block';
                 mostrarURLs();
+                renderDashboard();
             }
         }
         
@@ -1006,6 +1103,7 @@
             var idx = tabs.indexOf(s);
             if (idx >= 0) document.querySelectorAll('.nav button')[idx].classList.add('active');
             
+            if (s === 'dashboard') renderDashboard();
             if (s === 'checkin') resetGate();
             if (s === 'enfermeira') renderEnf();
             if (s === 'calendario') renderCal();
@@ -1297,8 +1395,10 @@
             if (motivoEnf.length < 10) return;
             
             // 1. Atualiza localmente IMEDIATO (UI responde na hora)
+            var agora = new Date();
+            var aprovadoEm = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
             db.plantoes = db.plantoes.map(p => 
-                p.id === id ? {...p, status: 'aprovado', motivoEnf: motivoEnf} : p
+                p.id === id ? {...p, status: 'aprovado', motivoEnf: motivoEnf, aprovadoPor: usuarioLogado, aprovadoEm: aprovadoEm} : p
             );
             localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
             
@@ -1317,6 +1417,16 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(motivoEnf)
             }).catch(function() {});
+            fetch(FIREBASE_URL + '/plantoes/' + id + '/aprovadoPor.json', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(usuarioLogado)
+            }).catch(function() {});
+            fetch(FIREBASE_URL + '/plantoes/' + id + '/aprovadoEm.json', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(aprovadoEm)
+            }).catch(function() {});
         }
         
         function rejeitar(id) {
@@ -1332,6 +1442,57 @@
             }).catch(function() {});
             renderEnf();
             renderCal();
+        }
+        
+        function renderDashboard() {
+            var meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+            var agora = new Date();
+            var mes = agora.getMonth();
+            var ano = agora.getFullYear();
+            
+            document.getElementById('dash-periodo').textContent = meses[mes] + ' de ' + ano;
+            
+            // Filtrar plantões do mês atual
+            var doMes = db.plantoes.filter(function(p) {
+                var d = p.dataObj instanceof Date ? p.dataObj : new Date(p.dataObj);
+                return d.getMonth() === mes && d.getFullYear() === ano;
+            });
+            
+            var pendentes  = doMes.filter(function(p) { return p.status === 'pendente'; });
+            var aprovados  = doMes.filter(function(p) { return p.status === 'aprovado' || p.status === 'pago'; });
+            var rejeitados = doMes.filter(function(p) { return p.status === 'rejeitado'; });
+            var pagos      = doMes.filter(function(p) { return p.status === 'pago'; });
+            var aprovApagar = doMes.filter(function(p) { return p.status === 'aprovado'; });
+            
+            var totalPago   = pagos.reduce(function(s,p){ return s + p.valor; }, 0);
+            var totalApagar = aprovApagar.reduce(function(s,p){ return s + p.valor; }, 0);
+            
+            document.getElementById('dash-total').textContent     = doMes.length;
+            document.getElementById('dash-pendentes').textContent  = pendentes.length;
+            document.getElementById('dash-aprovados').textContent  = aprovados.length;
+            document.getElementById('dash-rejeitados').textContent = rejeitados.length;
+            document.getElementById('dash-val-pago').textContent   = 'R$' + totalPago.toFixed(2);
+            document.getElementById('dash-val-apagar').textContent = 'R$' + totalApagar.toFixed(2);
+            
+            // Por funcionário
+            var grupos = {};
+            doMes.forEach(function(p) {
+                if (!grupos[p.func]) grupos[p.func] = { total: 0, valor: 0 };
+                grupos[p.func].total++;
+                grupos[p.func].valor += p.valor;
+            });
+            
+            var html = '';
+            Object.keys(grupos).sort().forEach(function(nome) {
+                var g = grupos[nome];
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;';
+                html += 'padding:8px 12px;background:var(--light);border-radius:6px;margin-bottom:6px;font-size:13px;">';
+                html += '<span>👤 ' + nome + '</span>';
+                html += '<span><strong>' + g.total + '</strong> plantão(ões) · <strong>R$' + g.valor.toFixed(2) + '</strong></span>';
+                html += '</div>';
+            });
+            
+            document.getElementById('dash-por-func').innerHTML = html || '<p style="font-size:12px;color:#666;">Nenhum plantão este mês.</p>';
         }
         
         function renderCal() {
@@ -1570,7 +1731,7 @@
             }
             
             var html = '<table class="payment-table">';
-            html += '<thead><tr><th>ID</th><th>Data</th><th>Hora</th><th>Funcionário</th><th>Tipo</th><th>Motivo</th><th>Hóspede</th><th>Autor.</th><th>Valor</th><th>Status</th><th>Localização</th><th style="text-align:center;">Apagar</th></tr></thead>';
+            html += '<thead><tr><th>ID</th><th>Data</th><th>Hora</th><th>Funcionário</th><th>Tipo</th><th>Motivo</th><th>Hóspede</th><th>Autor.</th><th>Valor</th><th>Status</th><th>Aprovado por</th><th>Data Aprov.</th><th>Justificativa Enf.</th><th>Localização</th><th style="text-align:center;">Apagar</th></tr></thead>';
             html += '<tbody>';
             
             db.plantoes.forEach(p => {
@@ -1591,6 +1752,9 @@
                 html += '<td style="font-size:11px;">' + (p.autor || '-') + '</td>';
                 html += '<td><strong>R$' + p.valor + '</strong></td>';
                 html += '<td>' + statusBadge + '</td>';
+                html += '<td style="font-size:11px;color:var(--success);">' + (p.aprovadoPor || '-') + '</td>';
+                html += '<td style="font-size:11px;">' + (p.aprovadoEm || '-') + '</td>';
+                html += '<td style="font-size:11px;font-style:italic;">' + (p.motivoEnf || '-') + '</td>';
                 html += '<td style="font-size:10px;color:#666;">' + (p.endereco || '-') + '</td>';
                 html += '<td style="text-align:center;"><button onclick="apagarPlantao(' + p.id + ')" style="background:var(--danger);color:white;border:none;border-radius:4px;padding:4px 8px;font-size:11px;cursor:pointer;">🗑️</button></td>';
                 html += '</tr>';
