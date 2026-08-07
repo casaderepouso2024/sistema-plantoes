@@ -1,4 +1,3 @@
-[plantoes_v9.html](https://github.com/user-attachments/files/28799527/plantoes_v9.html)
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -1054,7 +1053,11 @@
                 document.getElementById('qr-generator-section').style.display = 'block';
                 document.getElementById('links-section').style.display = 'block';
                 mostrarURLs();
-                renderDashboard();
+                // Sincroniza dados do Firebase antes de mostrar o dashboard
+                sincronizarFirebase(function() {
+                    show('dashboard');
+                    renderCal();
+                });
             }
         }
         
@@ -1079,15 +1082,12 @@
                 nav.classList.add('hidden');
             } else if (tipoAcesso === 'enfermeira') {
                 banner.textContent = '💉 Acesso Enfermeira — Aprovação de Plantões';
-                buttons[0].disabled = true;
-                buttons[1].disabled = false;
-                buttons[2].disabled = true;
-                buttons[3].disabled = true;
-                buttons[4].disabled = true;
-                buttons[5].disabled = true;
+                // Desabilita todos os botões e habilita apenas "Enfermeira" (índice 2)
+                buttons.forEach(function(b, i) { b.disabled = (i !== 2); });
                 show('enfermeira');
             } else {
                 banner.textContent = '👨‍💼 Acesso Gestor — Controle Total';
+                buttons.forEach(function(b) { b.disabled = false; });
             }
         }
         
@@ -1099,16 +1099,16 @@
             document.querySelector('#screen-' + s).classList.add('active');
             document.querySelectorAll('.nav button').forEach(el => el.classList.remove('active'));
             
-            var tabs = ['checkin', 'enfermeira', 'calendario', 'pagamentos', 'historico', 'cadastros'];
+            var tabs = ['dashboard', 'checkin', 'enfermeira', 'calendario', 'pagamentos', 'historico', 'cadastros'];
             var idx = tabs.indexOf(s);
             if (idx >= 0) document.querySelectorAll('.nav button')[idx].classList.add('active');
             
-            if (s === 'dashboard') renderDashboard();
+            if (s === 'dashboard') sincronizarFirebase(renderDashboard);
             if (s === 'checkin') resetGate();
             if (s === 'enfermeira') renderEnf();
-            if (s === 'calendario') renderCal();
-            if (s === 'pagamentos') { initDates(); renderTab(); }
-            if (s === 'historico') renderHistorico();
+            if (s === 'calendario') sincronizarFirebase(renderCal);
+            if (s === 'pagamentos') { initDates(); sincronizarFirebase(renderTab); }
+            if (s === 'historico') sincronizarFirebase(renderHistorico);
         }
         
         function resetGate() {
@@ -1363,29 +1363,31 @@
             }
         }
         
-        function renderEnf() {
-            // Busca SEMPRE do Firebase (banco compartilhado entre todos os dispositivos)
-            document.getElementById('lista-enf').innerHTML = '<p style="font-size:12px;color:#666;">🔄 Buscando plantões...</p>';
+        function sincronizarFirebase(callback) {
+            // Busca todos os plantões do Firebase (banco compartilhado entre dispositivos)
             fetch(FIREBASE_URL + '/plantoes.json')
                 .then(function(r) { return r.json(); })
                 .then(function(dados) {
                     if (dados && typeof dados === 'object') {
                         var remotos = Object.values(dados);
-                        // Reconstrói db.plantoes com dados do Firebase (fonte da verdade)
                         db.plantoes = remotos.map(function(r) {
                             r.dataObj = r.dataISO ? new Date(r.dataISO) : new Date(r.data.split('/').reverse().join('-'));
                             r.valor = parseFloat(r.valor) || 0;
                             return r;
                         });
-                        // Ordena do mais recente pro mais antigo
                         db.plantoes.sort(function(a, b) { return b.id - a.id; });
                         localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
                     }
-                    renderEnfUI();
+                    if (callback) callback();
                 })
                 .catch(function() {
-                    renderEnfUI();
+                    if (callback) callback();
                 });
+        }
+        
+        function renderEnf() {
+            document.getElementById('lista-enf').innerHTML = '<p style="font-size:12px;color:#666;">🔄 Buscando plantões...</p>';
+            sincronizarFirebase(renderEnfUI);
         }
         
         function aprovar(id) {
