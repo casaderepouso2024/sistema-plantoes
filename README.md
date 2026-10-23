@@ -591,7 +591,7 @@
         <div class="nav" id="nav-container">
             <button onclick="show('dashboard')">Dashboard</button>
             <button onclick="show('checkin')">Check-in</button>
-            <button onclick="show('enfermeira')">Enfermeira</button>
+            <button onclick="show('enfermeira')">Aprovações</button>
             <button onclick="show('calendario')">Calendário</button>
             <button onclick="show('pagamentos')">Pagamentos</button>
             <button onclick="show('historico')">Histórico</button>
@@ -719,6 +719,11 @@
                 <h2>Aguardando aprovação</h2>
                 <div id="lista-enf"></div>
             </div>
+            
+            <div class="card">
+                <h2>📋 Últimas 20 aprovações</h2>
+                <div id="hist-aprov"></div>
+            </div>
         </div>
         
         <!-- CALENDÁRIO -->
@@ -820,10 +825,10 @@
                 </div>
                 
                 <div class="link-card" style="border-color:var(--warning);">
-                    <h4 style="color:var(--warning);">💉 LINK ENFERMEIRA</h4>
+                    <h4 style="color:var(--warning);">✅ LINK APROVAÇÕES</h4>
                     <p>Acesso apenas para aprovar plantões</p>
                     <div class="url-display" id="url-enf"></div>
-                    <button class="btn btn-sm btn-warning" onclick="copiarURL('enfermeira')">📋 Copiar Link Enfermeira</button>
+                    <button class="btn btn-sm btn-warning" onclick="copiarURL('enfermeira')">📋 Copiar Link Aprovações</button>
                 </div>
                 
                 <div class="link-card" style="border-color:var(--primary);">
@@ -1081,8 +1086,8 @@
                 banner.textContent = '👤 Acesso Funcionário — Check-in de Plantão';
                 nav.classList.add('hidden');
             } else if (tipoAcesso === 'enfermeira') {
-                banner.textContent = '💉 Acesso Enfermeira — Aprovação de Plantões';
-                // Desabilita todos os botões e habilita apenas "Enfermeira" (índice 2)
+                banner.textContent = '✅ Acesso Aprovações — Aprovação de Plantões';
+                // Desabilita todos os botões e habilita apenas "Aprovações" (índice 2)
                 buttons.forEach(function(b, i) { b.disabled = (i !== 2); });
                 show('enfermeira');
             } else {
@@ -1296,6 +1301,8 @@
             document.getElementById('m-aprov').textContent = aprov.length;
             document.getElementById('m-rej').textContent = rej.length;
             
+            renderHistAprov();
+            
             var el = document.getElementById('lista-enf');
             
             if (!pend.length) {
@@ -1314,7 +1321,7 @@
                     ${p.hospede ? '<div class="item-sub" style="color:#0369a1;font-weight:500;">🛏️ Hóspede: ' + p.hospede + '</div>' : ''}
                     <div style="margin-top:10px;">
                         <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">
-                            Justificativa da enfermeira <span style="color:var(--danger);">*</span>
+                            Justificativa da aprovação <span style="color:var(--danger);">*</span>
                         </label>
                         <textarea
                             id="motivo-enf-${p.id}"
@@ -1338,6 +1345,56 @@
                     </div>
                 </div>
             `).join('');
+        }
+        
+        function escHtml(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+        
+        function aprovadoEmParaNumero(txt) {
+            // Converte "dd/mm/aaaa hh:mm" em número para ordenar; 0 se não houver
+            if (!txt) return 0;
+            var partes = String(txt).split(' ');
+            var d = (partes[0] || '').split('/');
+            var h = (partes[1] || '0:0').split(':');
+            var dt = new Date(+d[2], (+d[1]) - 1, +d[0], +h[0] || 0, +h[1] || 0);
+            return isNaN(dt.getTime()) ? 0 : dt.getTime();
+        }
+        
+        function renderHistAprov() {
+            var el = document.getElementById('hist-aprov');
+            if (!el) return;
+            // Aprovados, incluindo os que depois foram marcados como pagos
+            var lista = db.plantoes.filter(function(p) {
+                return p.status === 'aprovado' || p.status === 'pago';
+            });
+            // Mais recente primeiro: pela data/hora da aprovação; empate ou sem data -> pelo lançamento
+            lista.sort(function(a, b) {
+                var dif = aprovadoEmParaNumero(b.aprovadoEm) - aprovadoEmParaNumero(a.aprovadoEm);
+                if (dif !== 0) return dif;
+                return Number(b.id) - Number(a.id);
+            });
+            lista = lista.slice(0, 20);
+            
+            if (!lista.length) {
+                el.innerHTML = '<p style="font-size:12px;color:#666;">Nenhuma aprovação ainda.</p>';
+                return;
+            }
+            
+            el.innerHTML = lista.map(function(p) {
+                return '<div class="item">' +
+                    '<div class="item-head">' +
+                        '<span class="item-name">' + escHtml(p.func) + '</span>' +
+                        '<span class="badge badge-ok">Aprovado</span>' +
+                    '</div>' +
+                    '<div class="item-sub">' + escHtml(p.tipo) + '</div>' +
+                    '<div class="item-sub">📅 Plantão: ' + escHtml(p.data || '-') + ' · ✅ Aprovado em: ' + escHtml(p.aprovadoEm || '-') + '</div>' +
+                    '<div class="item-sub">Motivo do funcionário: ' + escHtml(p.motivo || '-') + '</div>' +
+                    '<div class="item-sub" style="font-style:italic;">Justificativa: ' + escHtml(p.motivoEnf || '-') + '</div>' +
+                '</div>';
+            }).join('');
         }
         
         function verificarMotivoEnf(id) {
