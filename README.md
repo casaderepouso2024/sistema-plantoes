@@ -756,6 +756,83 @@
         
         <!-- PAGAMENTOS -->
         <div class="screen" id="screen-pagamentos">
+            <!-- LANÇAMENTO MANUAL (plantões sem check-in) -->
+            <div class="card" style="border:2px solid #7c3aed;">
+                <div onclick="toggleFormManual()" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+                    <h2 style="margin-bottom:0;color:#6d28d9;">➕ Lançar plantão manual</h2>
+                    <span id="lm-seta" style="font-size:12px;color:#6d28d9;font-weight:600;white-space:nowrap;">Abrir ▼</span>
+                </div>
+                <p style="font-size:11px;color:#666;margin-top:4px;">Para plantões sem check-in no sistema (ex.: funcionário esqueceu e preencheu o formulário com a gestora).</p>
+                <div id="lm-msg" style="display:none;margin-top:10px;padding:10px;border-radius:6px;font-size:12px;"></div>
+                <div id="lm-form" style="display:none;margin-top:12px;">
+                    <div class="field">
+                        <label>Funcionário *</label>
+                        <select id="lm-func"></select>
+                    </div>
+                    <div class="row2">
+                        <div class="field">
+                            <label>Data do plantão *</label>
+                            <input type="date" id="lm-data">
+                        </div>
+                        <div class="field">
+                            <label>Hora *</label>
+                            <input type="time" id="lm-hora">
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>Tipo de plantão *</label>
+                        <select id="lm-tipo" onchange="lmTipoMudou()"></select>
+                    </div>
+                    <div class="field">
+                        <label>Motivo</label>
+                        <select id="lm-motivo"></select>
+                    </div>
+                    <div class="field">
+                        <label>Hóspede <span id="lm-hosp-obrig" style="color:var(--danger);display:none;">* (obrigatório para este tipo)</span></label>
+                        <input type="text" id="lm-hospede" placeholder="Nome do hóspede, se houver">
+                    </div>
+                    <div class="field">
+                        <label>Autorizado por</label>
+                        <select id="lm-autor"></select>
+                    </div>
+                    <div class="row2">
+                        <div class="field">
+                            <label>Valor (R$) *</label>
+                            <input type="number" id="lm-valor" step="0.01" min="0">
+                        </div>
+                        <div class="field">
+                            <label>Status</label>
+                            <input type="text" value="Aprovado" disabled>
+                        </div>
+                    </div>
+                    <div class="row2">
+                        <div class="field">
+                            <label>Aprovado por *</label>
+                            <select id="lm-aprovador"></select>
+                        </div>
+                        <div class="field">
+                            <label>Data da aprovação *</label>
+                            <input type="datetime-local" id="lm-aprovEm">
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>Justificativa da aprovação * <span style="font-weight:400;">(mínimo 10 caracteres)</span></label>
+                        <textarea id="lm-justif" rows="2"></textarea>
+                    </div>
+                    <div class="field">
+                        <label>Localização</label>
+                        <input type="text" id="lm-local" placeholder="Se ficar vazio, grava 'Lançamento manual'">
+                    </div>
+                    <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin-bottom:12px;cursor:pointer;">
+                        <input type="checkbox" id="lm-pago"> ✅ Pago?
+                    </label>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-primary" id="lm-btn-salvar" onclick="salvarLancamentoManual()" style="flex:2;">Salvar lançamento</button>
+                        <button class="btn" onclick="limparFormManual()" style="flex:1;background:var(--light);color:#374151;">Limpar</button>
+                    </div>
+                </div>
+            </div>
+            
             <div class="card">
                 <h2>💰 Relatório de Pagamentos</h2>
                 
@@ -1178,6 +1255,8 @@
                 opt.textContent = a.nome;
                 es.appendChild(opt);
             });
+            
+            preencherFormManual();
         }
         
         function verificarHospede() {
@@ -1675,6 +1754,176 @@
             renderTab();
         }
         
+        // ── LANÇAMENTO MANUAL (aba Pagamentos, só gestor) ───────────────────
+        function lmDoisDig(n) { return String(n).padStart(2, '0'); }
+        
+        function lmTag(p) {
+            return p && p.manual ? ' <span class="badge" style="background:#ede9fe;color:#5b21b6;font-size:10px;padding:2px 6px;">Manual</span>' : '';
+        }
+        
+        function lmPreencherSelect(id, itens, placeholder) {
+            var sel = document.getElementById(id);
+            if (!sel) return;
+            var atual = sel.value;
+            sel.innerHTML = '<option value="">' + placeholder + '</option>';
+            itens.forEach(function(nome) {
+                var opt = document.createElement('option');
+                opt.value = nome;
+                opt.textContent = nome;
+                sel.appendChild(opt);
+            });
+            if (atual && itens.indexOf(atual) !== -1) sel.value = atual;
+        }
+        
+        function preencherFormManual() {
+            lmPreencherSelect('lm-func', db.funcionarios.map(function(f) { return f.nome; }), 'Selecione...');
+            lmPreencherSelect('lm-tipo', db.tipos.map(function(t) { return t.nome; }), 'Selecione...');
+            lmPreencherSelect('lm-motivo', db.motivos, 'Opcional...');
+            lmPreencherSelect('lm-autor', db.autorizadores.map(function(a) { return a.nome; }), 'Selecione...');
+            lmPreencherSelect('lm-aprovador', USUARIOS.map(function(u) { return u.login; }), 'Selecione...');
+        }
+        
+        function lmMensagem(texto, tipo) {
+            var m = document.getElementById('lm-msg');
+            if (!texto) { m.style.display = 'none'; m.innerHTML = ''; return; }
+            m.style.display = 'block';
+            m.style.background = tipo === 'ok' ? '#dcfce7' : '#fee2e2';
+            m.style.color = tipo === 'ok' ? '#166534' : '#991b1b';
+            m.innerHTML = texto;
+        }
+        
+        function limparFormManual() {
+            preencherFormManual();
+            var agora = new Date();
+            var horaAgora = lmDoisDig(agora.getHours()) + ':' + lmDoisDig(agora.getMinutes());
+            ['lm-func', 'lm-tipo', 'lm-motivo', 'lm-autor', 'lm-hospede', 'lm-valor', 'lm-justif', 'lm-local'].forEach(function(id) {
+                document.getElementById(id).value = '';
+            });
+            document.getElementById('lm-data').value = toInputDate(agora);
+            document.getElementById('lm-hora').value = horaAgora;
+            document.getElementById('lm-aprovador').value = usuarioLogado || '';
+            document.getElementById('lm-aprovEm').value = toInputDate(agora) + 'T' + horaAgora;
+            document.getElementById('lm-pago').checked = false;
+            document.getElementById('lm-hosp-obrig').style.display = 'none';
+            lmMensagem('', '');
+        }
+        
+        function toggleFormManual() {
+            var f = document.getElementById('lm-form');
+            var abrir = f.style.display === 'none';
+            f.style.display = abrir ? 'block' : 'none';
+            document.getElementById('lm-seta').textContent = abrir ? 'Fechar ▲' : 'Abrir ▼';
+            if (abrir) {
+                if (!document.getElementById('lm-data').value) {
+                    limparFormManual();
+                } else if (!document.getElementById('lm-aprovador').value) {
+                    document.getElementById('lm-aprovador').value = usuarioLogado || '';
+                }
+            }
+        }
+        
+        function lmTipoMudou() {
+            var t = db.tipos.find(function(x) { return x.nome === document.getElementById('lm-tipo').value; });
+            if (t) document.getElementById('lm-valor').value = t.valor;
+            document.getElementById('lm-hosp-obrig').style.display = (t && t.requerHospede) ? 'inline' : 'none';
+        }
+        
+        function salvarLancamentoManual() {
+            if (tipoAcesso !== 'gestor') return;
+            var func = document.getElementById('lm-func').value;
+            var dataVal = document.getElementById('lm-data').value;      // aaaa-mm-dd
+            var horaVal = document.getElementById('lm-hora').value;      // hh:mm
+            var tipo = document.getElementById('lm-tipo').value;
+            var motivo = document.getElementById('lm-motivo').value;
+            var hospede = document.getElementById('lm-hospede').value.trim();
+            var autor = document.getElementById('lm-autor').value;
+            var valorTxt = document.getElementById('lm-valor').value;
+            var aprovador = document.getElementById('lm-aprovador').value;
+            var aprovEmVal = document.getElementById('lm-aprovEm').value; // aaaa-mm-ddThh:mm
+            var justif = document.getElementById('lm-justif').value.trim();
+            var local = document.getElementById('lm-local').value.trim();
+            var pago = document.getElementById('lm-pago').checked;
+            
+            var faltando = [];
+            if (!func) faltando.push('Funcionário');
+            if (!dataVal) faltando.push('Data do plantão');
+            if (!horaVal) faltando.push('Hora');
+            if (!tipo) faltando.push('Tipo de plantão');
+            var tSel = db.tipos.find(function(x) { return x.nome === tipo; });
+            if (tSel && tSel.requerHospede && !hospede) faltando.push('Hóspede (obrigatório para este tipo)');
+            var valor = parseFloat(String(valorTxt).replace(',', '.'));
+            if (valorTxt === '' || isNaN(valor) || valor < 0) faltando.push('Valor');
+            if (!aprovador) faltando.push('Aprovado por');
+            if (!aprovEmVal) faltando.push('Data da aprovação');
+            if (justif.length < 10) faltando.push('Justificativa (mínimo 10 caracteres)');
+            if (faltando.length) {
+                lmMensagem('Preencha: ' + faltando.join(', ') + '.', 'erro');
+                return;
+            }
+            
+            var d = dataVal.split('-');
+            var h = horaVal.split(':');
+            var dataPlantao = new Date(+d[0], +d[1] - 1, +d[2], +h[0], +h[1]);
+            var dataBR = d[2] + '/' + d[1] + '/' + d[0];
+            var ap = aprovEmVal.split('T');
+            var apd = ap[0].split('-');
+            var aprovadoEm = apd[2] + '/' + apd[1] + '/' + apd[0] + ' ' + (ap[1] || '00:00').substring(0, 5);
+            
+            if (!confirm('Confirmar lançamento manual?\n\n' + func + ' · ' + tipo + '\n' + dataBR + ' ' + horaVal + ' · R$' + valor.toFixed(2) + (pago ? ' · PAGO' : ''))) return;
+            
+            var p = {
+                id: Date.now(),
+                func: func,
+                tipo: tipo,
+                motivo: motivo || '',
+                data: dataBR,
+                dataObj: new Date(+d[0], +d[1] - 1, +d[2]),
+                dataISO: dataPlantao.toISOString(),
+                hora: horaVal,
+                valor: valor,
+                status: pago ? 'pago' : 'aprovado',
+                autor: autor || '',
+                hospede: hospede || '',
+                endereco: local || 'Lançamento manual',
+                motivoEnf: justif,
+                aprovadoPor: aprovador,
+                aprovadoEm: aprovadoEm,
+                manual: true,
+                lancadoPor: usuarioLogado || '',
+                lancadoEm: new Date().toISOString()
+            };
+            
+            var btn = document.getElementById('lm-btn-salvar');
+            btn.disabled = true;
+            btn.textContent = 'Salvando...';
+            
+            // Grava primeiro no Firebase; só mostra como salvo se a gravação der certo
+            fetch(FIREBASE_URL + '/plantoes/' + p.id + '.json', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(p)
+            }).then(function(r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+            }).then(function() {
+                db.plantoes.unshift(p);
+                localStorage.setItem('plantoes', JSON.stringify(db.plantoes));
+                var deVal = document.getElementById('tab-de').value;
+                var ateVal = document.getElementById('tab-ate').value;
+                var fora = (deVal && dataVal < deVal) || (ateVal && dataVal > ateVal);
+                limparFormManual();
+                lmMensagem('✅ Lançamento salvo: <strong>' + escHtml(func) + '</strong> em ' + dataBR + '.' +
+                    (fora ? '<br>Atenção: essa data está fora do período filtrado abaixo — ajuste "De/Até" para vê-lo no relatório.' : ''), 'ok');
+                renderTab();
+                renderCal();
+                renderHistorico();
+            }, function() {
+                lmMensagem('❌ Não foi possível salvar (verifique a internet). Nada foi gravado — tente de novo.', 'erro');
+            }).finally(function() {
+                btn.disabled = false;
+                btn.textContent = 'Salvar lançamento';
+            });
+        }
+        
         function renderTab() {
             var el = document.getElementById('tab-lista');
             var deVal = document.getElementById('tab-de').value;
@@ -1727,7 +1976,7 @@
                     var isPago = p.status === 'pago';
                     html += '<tr class="' + (isPago ? 'pago' : '') + '">';
                     html += '<td>' + p.data + '</td>';
-                    html += '<td style="font-size:11px;">' + p.tipo + '</td>';
+                    html += '<td style="font-size:11px;">' + p.tipo + lmTag(p) + '</td>';
                     html += '<td><strong>R$' + p.valor + '</strong></td>';
                     html += '<td style="text-align:center;">';
                     if (isPago) {
@@ -1810,7 +2059,7 @@
                 html += '<td style="font-size:11px;color:#0369a1;">' + (p.hospede || '-') + '</td>';
                 html += '<td style="font-size:11px;">' + (p.autor || '-') + '</td>';
                 html += '<td><strong>R$' + p.valor + '</strong></td>';
-                html += '<td>' + statusBadge + '</td>';
+                html += '<td>' + statusBadge + lmTag(p) + '</td>';
                 html += '<td style="font-size:11px;color:var(--success);">' + (p.aprovadoPor || '-') + '</td>';
                 html += '<td style="font-size:11px;">' + (p.aprovadoEm || '-') + '</td>';
                 html += '<td style="font-size:11px;font-style:italic;">' + (p.motivoEnf || '-') + '</td>';
